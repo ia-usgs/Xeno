@@ -42,7 +42,7 @@ pip install mac-vendor-lookup scapy
 
 Clone this repository:
 ```bash
-git clone https://github.com/yourusername/wifi-scout.git
+git clone https://github.com/ia-usgs/Wifi-Scout.git
 cd wifi-scout
 ```
 
