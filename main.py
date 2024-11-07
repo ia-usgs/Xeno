@@ -10,7 +10,7 @@ import network_enhancements
 import utils
 import asyncio
 import os
-import advanced_attacks  # Importing the advanced attacks module
+import advanced_attacks
 
 CONFIG_FILE = "/home/pi/scout_partner/config.json"
 WAIT_TIME = 15 * 60  # 15 minutes in seconds
