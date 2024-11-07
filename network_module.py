@@ -1,12 +1,7 @@
 import subprocess
-import os
-from datetime import datetime
+from ftplib import FTP
+from smb.SMBConnection import SMBConnection
 from utils import log_error
-
-REMOTE_HOST = "192.168.68.62"  # Example IP for remote host
-REMOTE_USER = "irvin"  # Replace with the actual username
-REMOTE_PATH = "C:\\Users\\username\\Downloads\\scout_partner"  # Destination on remote host
-LOCAL_FILE = "/home/pi/partner_device/scan_results.json"  # File to transfer
 
 # Wi-Fi functions
 def connect_to_wifi(ssid, password):
@@ -34,25 +29,36 @@ def is_wifi_connected():
     result = subprocess.run(["iwconfig", "wlan0"], capture_output=True, text=True)
     return "ESSID:" in result.stdout
 
-# File transfer function
-def transfer_file():
-    """Transfers the scan results JSON file to the specified remote host over SCP."""
-    if not (is_ethernet_connected() or is_wifi_connected()):
-        print("No network connection available. Skipping file transfer.")
-        return False
-    
+# File-grabbing functions for FTP and SMB
+def access_ftp_files(server_ip, username, password):
+    """Accesses files from an FTP server and downloads them."""
     try:
-        print(f"Starting file transfer to {REMOTE_USER}@{REMOTE_HOST} at {datetime.now().isoformat()}")
-        # Use SCP command to transfer file
-        scp_command = f"scp {LOCAL_FILE} {REMOTE_USER}@{REMOTE_HOST}:{REMOTE_PATH}"
-        transfer_result = os.system(scp_command)
-        
-        if transfer_result == 0:  # Check if the transfer was successful
-            print(f"File {LOCAL_FILE} successfully transferred to {REMOTE_USER}@{REMOTE_HOST}:{REMOTE_PATH}")
-            return True
-        else:
-            print(f"File transfer failed with result code: {transfer_result}")
-            return False
+        print(f"Attempting to connect to FTP server at {server_ip}...")
+        ftp = FTP(server_ip)
+        ftp.login(user=username, passwd=password)
+        print("Connected to FTP server. Listing files...")
+        files = ftp.nlst()  # List files in the directory
+        print(f"Files on FTP server {server_ip}: {files}")
+        for file in files:
+            with open(file, 'wb') as local_file:
+                ftp.retrbinary(f'RETR {file}', local_file.write)
+                print(f"Downloaded {file} from FTP server.")
+        ftp.quit()
     except Exception as e:
-        log_error("File Transfer", "File transfer failed", e)
-        return False
+        log_error("FTP Access", f"Failed to access files on FTP server {server_ip}", e)
+
+def access_smb_files(server_ip, username, password, share_name):
+    """Accesses files from an SMB share and downloads them."""
+    try:
+        print(f"Attempting to connect to SMB share at {server_ip}...")
+        conn = SMBConnection(username, password, "WiFiScout", "TargetDevice", use_ntlm_v2=True)
+        conn.connect(server_ip, 445)
+        print("Connected to SMB server. Listing files...")
+        files = conn.listPath(share_name, '/')
+        for file in files:
+            with open(file.filename, 'wb') as f:
+                conn.retrieveFile(share_name, '/' + file.filename, f)
+                print(f"Downloaded {file.filename} from SMB server.")
+        conn.close()
+    except Exception as e:
+        log_error("SMB Access", f"Failed to access files on SMB server {server_ip}", e)
