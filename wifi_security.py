@@ -2,7 +2,7 @@ import subprocess
 import re
 import requests
 import nmap
-import time  # Import for bandwidth check
+import time 
 from mac_vendor_lookup import MacLookup
 import socket
 from datetime import datetime
@@ -19,7 +19,7 @@ def check_security(ssid):
     """
     Performs comprehensive security checks on the given Wi-Fi network SSID and returns the security information.
     """
-    router_ip = get_default_gateway() or "192.168.1.1"  # Discover gateway or fallback
+    router_ip = get_default_gateway() or "192.168.1.1" 
     security_info = {
         "SSID": ssid,
         "timestamp": datetime.now().isoformat(),
