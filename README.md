@@ -144,6 +144,7 @@ WiFi Scout is being enhanced to communicate with Pwnagotchi through a mesh netwo
 - **Mesh Network Communication**: Full integration with Pwnagotchi to automatically share handshakes and cracked passwords.
 - **Expanded Bluetooth Scanning**: Provide signal strength and classification for Bluetooth devices.
 - **Enhanced WPA-SEC Integration**: Allow Scout to request specific SSIDs for focused scanning.
+- **A guide to have it auto run, Mine already does just gotta remember how I did it lol.
 
 ---
 
