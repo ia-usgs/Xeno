@@ -35,8 +35,8 @@ fi
 echo -e "${GREEN}[3/5] Installing Python dependencies...${RESET}"
 
 # Create a virtual environment for Python (optional but recommended)
-python3 -m venv xeno_env
-source xeno_env/bin/activate
+#python3 -m venv xeno_env
+#source xeno_env/bin/activate
 
 # Install required Python packages with --break-system-packages for sudo compatibility
 sudo pip3 install paramiko pysmb requests --break-system-packages
