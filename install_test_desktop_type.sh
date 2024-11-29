@@ -7,12 +7,28 @@ RESET="\033[0m"
 
 echo -e "${GREEN}Starting dependency installation for Xeno...${RESET}"
 
-# Step 1: Update and Upgrade System
-echo -e "${GREEN}[1/6] Updating and upgrading system...${RESET}"
+# Step 1: Clone the Repository
+echo -e "${GREEN}[1/7] Cloning the Xeno repository...${RESET}"
+
+# Define repository URL and clone path
+REPO_URL="https://github.com/ia-usgs/Xeno.git"
+CLONE_DIR="/home/pi/xeno"
+
+# Check if the repository is already cloned
+if [ -d "$CLONE_DIR" ]; then
+    echo -e "${GREEN}Xeno repository already exists at $CLONE_DIR. Pulling the latest changes...${RESET}"
+    cd "$CLONE_DIR" && git pull
+else
+    echo -e "${GREEN}Cloning the repository into $CLONE_DIR...${RESET}"
+    git clone "$REPO_URL" "$CLONE_DIR"
+fi
+
+# Step 2: Update and Upgrade System
+echo -e "${GREEN}[2/7] Updating and upgrading system...${RESET}"
 sudo apt-get update && sudo apt-get upgrade -y
 
-# Step 2: Install System Dependencies
-echo -e "${GREEN}[2/6] Installing system dependencies...${RESET}"
+# Step 3: Install System Dependencies
+echo -e "${GREEN}[3/7] Installing system dependencies...${RESET}"
 sudo apt-get install -y git python3 python3-pip python3-venv nmap curl searchsploit \
     nmcli smbclient fbi fontconfig xserver-xorg x11-xserver-utils xinit openbox \
     libjpeg-dev libpng-dev
@@ -33,8 +49,8 @@ else
     echo -e "${GREEN}pip3 is already installed.${RESET}"
 fi
 
-# Step 3: Install Python Dependencies
-echo -e "${GREEN}[3/6] Installing Python dependencies...${RESET}"
+# Step 4: Install Python Dependencies
+echo -e "${GREEN}[4/7] Installing Python dependencies...${RESET}"
 
 # Install required Python packages with --break-system-packages for sudo compatibility
 sudo pip3 install paramiko pysmb requests pygame pillow --break-system-packages
@@ -52,8 +68,8 @@ except ImportError as e:
     print("${RED}Missing Python library:${RESET}", e)
 EOF
 
-# Step 4: Configure Desktop Environment
-echo -e "${GREEN}[4/6] Configuring desktop environment...${RESET}"
+# Step 5: Configure Desktop Environment
+echo -e "${GREEN}[5/7] Configuring desktop environment...${RESET}"
 
 # Create a minimal .xinitrc file to start Openbox
 if [ ! -f ~/.xinitrc ]; then
@@ -69,8 +85,8 @@ if ! grep -q "startx" ~/.bashrc; then
     echo "startx" >> ~/.bashrc
 fi
 
-# Step 5: Redirect Console and Set Up Framebuffer
-echo -e "${GREEN}[5/6] Configuring framebuffer and console output...${RESET}"
+# Step 6: Redirect Console and Set Up Framebuffer
+echo -e "${GREEN}[6/7] Configuring framebuffer and console output...${RESET}"
 
 # Update /boot/cmdline.txt to redirect console output
 sudo sed -i 's/$/ fbcon=map:0/' /boot/cmdline.txt
@@ -82,8 +98,8 @@ if ! grep -q "SDL_FBDEV" ~/.bashrc; then
     echo "export SDL_VIDEODRIVER=fbcon" >> ~/.bashrc
 fi
 
-# Step 6: Verify Installations
-echo -e "${GREEN}[6/6] Verifying installations...${RESET}"
+# Step 7: Verify Installations
+echo -e "${GREEN}[7/7] Verifying installations...${RESET}"
 
 # Check for system tools
 for tool in git nmap searchsploit nmcli fbi; do
@@ -103,5 +119,6 @@ fi
 
 # Final Message
 echo -e "${GREEN}All dependencies have been installed.${RESET}"
+echo -e "${GREEN}Repository cloned to $CLONE_DIR.${RESET}"
 echo -e "${GREEN}You can now proceed with setting up Xeno!${RESET}"
 echo -e "${GREEN}If using a desktop environment, reboot your system to apply changes.${RESET}"
