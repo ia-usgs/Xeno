@@ -8,51 +8,70 @@ RESET="\033[0m"
 echo -e "${GREEN}Starting dependency installation for Xeno (Non-Desktop)...${RESET}"
 
 # Step 1: Clone the Repository
-echo -e "${GREEN}[1/6] Cloning the Xeno repository...${RESET}"
+echo -e "${GREEN}[1/7] Cloning the Xeno repository...${RESET}"
 
 # Define repository URL and clone path
-REPO_URL="https://github.com/ia-usgs/xeno.git"
+REPO_URL="https://github.com/ia-usgs/Xeno.git"
 CLONE_DIR="/home/pi/xeno"
 
 # Check if the repository is already cloned
 if [ -d "$CLONE_DIR" ]; then
     echo -e "${GREEN}Xeno repository already exists at $CLONE_DIR. Pulling the latest changes...${RESET}"
+    git config --global --add safe.directory $CLONE_DIR
     cd "$CLONE_DIR" && git pull
 else
     echo -e "${GREEN}Cloning the repository into $CLONE_DIR...${RESET}"
     git clone "$REPO_URL" "$CLONE_DIR"
 fi
 
+# Set directory permissions to make it accessible to all users
+sudo chmod -R 777 /home/pi/xeno
+
 # Step 2: Update and Upgrade System
-echo -e "${GREEN}[2/6] Updating and upgrading system...${RESET}"
+echo -e "${GREEN}[2/7] Updating and upgrading system...${RESET}"
 sudo apt-get update && sudo apt-get upgrade -y
 
 # Step 3: Install System Dependencies
-echo -e "${GREEN}[3/6] Installing system dependencies...${RESET}"
-sudo apt-get install -y git python3 python3-pip python3-venv nmap curl searchsploit \
-    nmcli smbclient fbi libjpeg-dev libpng-dev
+echo -e "${GREEN}[3/7] Installing system dependencies...${RESET}"
+sudo apt-get install -y git python3 python3-pip python3-venv curl \
+    nmcli smbclient libjpeg-dev libpng-dev nmap fbi
 
-# Verify if git is installed
-if ! command -v git &>/dev/null; then
-    echo -e "${RED}[ERROR] git is not installed. Please check your package manager.${RESET}"
-    exit 1
-else
-    echo -e "${GREEN}git is installed.${RESET}"
-fi
+# Attempt to install searchsploit using the package manager
+if ! sudo apt-get install -y exploitdb; then
+    echo -e "${RED}[ERROR] Failed to install searchsploit via package manager. Attempting manual installation...${RESET}"
 
-# Verify if pip is installed
-if ! command -v pip3 &>/dev/null; then
-    echo -e "${RED}[ERROR] pip3 is not installed. Installing pip3...${RESET}"
-    sudo apt-get install -y python3-pip
+    # Manual installation of searchsploit from the new repository
+    SEARCHSPLOIT_DIR="/usr/share/exploitdb"
+    if [ ! -d "$SEARCHSPLOIT_DIR" ]; then
+        echo -e "${GREEN}Cloning ExploitDB repository from GitLab...${RESET}"
+        sudo git clone https://gitlab.com/exploit-database/exploitdb.git "$SEARCHSPLOIT_DIR"
+    else
+        echo -e "${GREEN}ExploitDB directory already exists. Pulling latest changes...${RESET}"
+        sudo git -C "$SEARCHSPLOIT_DIR" pull
+    fi
+
+    # Create symlink for searchsploit
+    echo -e "${GREEN}Creating symlink for searchsploit...${RESET}"
+    sudo ln -sf "$SEARCHSPLOIT_DIR/searchsploit" /usr/local/bin/searchsploit
+
+    # Ensure configuration file is linked
+    echo -e "${GREEN}Linking .searchsploit_rc configuration...${RESET}"
+    sudo ln -sf "$SEARCHSPLOIT_DIR/.searchsploit_rc" /root/.searchsploit_rc
+    ln -sf "$SEARCHSPLOIT_DIR/.searchsploit_rc" ~/.searchsploit_rc
+
+    # Verify searchsploit installation
+    if command -v searchsploit &>/dev/null; then
+        echo -e "${GREEN}searchsploit installed successfully.${RESET}"
+    else
+        echo -e "${RED}[ERROR] searchsploit installation failed. Please check manually.${RESET}"
+    fi
 else
-    echo -e "${GREEN}pip3 is already installed.${RESET}"
+    echo -e "${GREEN}searchsploit installed via package manager.${RESET}"
 fi
 
 # Step 4: Install Python Dependencies
-echo -e "${GREEN}[4/6] Installing Python dependencies...${RESET}"
-
-# Install required Python packages with --break-system-packages for sudo compatibility
-sudo pip3 install paramiko pysmb requests pygame pillow --break-system-packages
+echo -e "${GREEN}[4/7] Installing Python dependencies...${RESET}"
+sudo pip3 install python-nmap pyexploitdb paramiko pysmb requests pygame pillow --break-system-packages
 
 # Verify Python libraries
 python3 - <<EOF
@@ -67,42 +86,65 @@ except ImportError as e:
     print("${RED}Missing Python library:${RESET}", e)
 EOF
 
-# Step 5: Configure Framebuffer and SDL Settings
-echo -e "${GREEN}[5/6] Configuring framebuffer and SDL settings...${RESET}"
+# Step 5: Redirect Console and Set Up Framebuffer
+echo -e "${GREEN}[5/7] Configuring framebuffer and console output...${RESET}"
+
+# Update /boot/cmdline.txt to redirect console output
+sudo sed -i 's/$/ fbcon=map:0/' /boot/cmdline.txt
 
 # Ensure framebuffer device is set for SDL applications
 if ! grep -q "SDL_FBDEV" ~/.bashrc; then
     echo -e "${GREEN}Adding SDL framebuffer environment variables to .bashrc...${RESET}"
     echo "export SDL_FBDEV=/dev/fb1" >> ~/.bashrc
     echo "export SDL_VIDEODRIVER=fbcon" >> ~/.bashrc
-    echo "export SDL_NOMOUSE=1" >> ~/.bashrc  # Disable mouse cursor
 fi
 
-# Redirect console output away from the LCD
-echo -e "${GREEN}Redirecting console output to avoid interfering with framebuffer...${RESET}"
-sudo sed -i 's/$/ fbcon=map:0/' /boot/cmdline.txt
+# Step 6: Create Xeno Service
+echo -e "${GREEN}[6/7] Setting up Xeno service...${RESET}"
 
-# Step 6: Verify Installations
-echo -e "${GREEN}[6/6] Verifying installations...${RESET}"
+# Create a systemd service file for Xeno
+SERVICE_FILE="/etc/systemd/system/xeno.service"
 
-# Check for system tools
-for tool in git nmap searchsploit nmcli fbi; do
-    if ! command -v $tool &>/dev/null; then
-        echo -e "${RED}[ERROR] $tool is not installed correctly.${RESET}"
-    else
-        echo -e "${GREEN}$tool is installed.${RESET}"
-    fi
-done
+sudo bash -c "cat > $SERVICE_FILE" <<EOF
+[Unit]
+Description=Xeno Service
+After=network.target
 
-# Verify framebuffer
-if [ -e /dev/fb1 ]; then
-    echo -e "${GREEN}Framebuffer device /dev/fb1 detected.${RESET}"
-else
-    echo -e "${RED}[ERROR] Framebuffer device /dev/fb1 not found. Check your LCD driver installation.${RESET}"
+[Service]
+ExecStart=/usr/bin/python3 $CLONE_DIR/main.py
+WorkingDirectory=$CLONE_DIR
+StandardOutput=inherit
+StandardError=inherit
+Restart=always
+User=pi
+Group=pi
+Environment="PYTHONUNBUFFERED=1"
+Environment="HOME=/home/pi"
+Environment="PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+Environment="SDL_FBDEV=/dev/fb1"
+Environment="SDL_VIDEODRIVER=fbcon"
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+# Enable and start the service
+sudo systemctl enable xeno.service
+sudo systemctl start xeno.service
+
+# Step 7: Install and Configure LCD Driver
+echo -e "${GREEN}[7/7] Installing and configuring LCD driver...${RESET}"
+
+LCD_DRIVER_DIR="/home/pi/LCD-show"
+if [ ! -d "$LCD_DRIVER_DIR" ]; then
+    echo -e "${GREEN}Cloning the LCD driver repository...${RESET}"
+    git clone https://github.com/goodtft/LCD-show.git "$LCD_DRIVER_DIR"
 fi
 
-# Final Message
-echo -e "${GREEN}All dependencies have been installed.${RESET}"
-echo -e "${GREEN}Repository cloned to $CLONE_DIR.${RESET}"
-echo -e "${GREEN}You can now proceed with setting up Xeno!${RESET}"
-echo -e "${GREEN}Reboot your system to apply changes.${RESET}"
+cd "$LCD_DRIVER_DIR"
+sudo chmod +x LCD35-show
+sudo ./LCD35-show
+
+# Final Message and Reboot
+echo -e "${GREEN}LCD driver installed. The system will now reboot to apply changes.${RESET}"
+sudo reboot
