@@ -5,15 +5,32 @@ GREEN="\033[0;32m"
 RED="\033[0;31m"
 RESET="\033[0m"
 
-echo -e "${GREEN}Starting dependency installation for Xeno...${RESET}"
+echo -e "${GREEN}Starting dependency installation for Xeno (Non-Desktop)...${RESET}"
 
-# Step 1: Update and Upgrade System
-echo -e "${GREEN}[1/5] Updating and upgrading system...${RESET}"
+# Step 1: Clone the Repository
+echo -e "${GREEN}[1/6] Cloning the Xeno repository...${RESET}"
+
+# Define repository URL and clone path
+REPO_URL="https://github.com/ia-usgs/xeno.git"
+CLONE_DIR="/home/pi/xeno"
+
+# Check if the repository is already cloned
+if [ -d "$CLONE_DIR" ]; then
+    echo -e "${GREEN}Xeno repository already exists at $CLONE_DIR. Pulling the latest changes...${RESET}"
+    cd "$CLONE_DIR" && git pull
+else
+    echo -e "${GREEN}Cloning the repository into $CLONE_DIR...${RESET}"
+    git clone "$REPO_URL" "$CLONE_DIR"
+fi
+
+# Step 2: Update and Upgrade System
+echo -e "${GREEN}[2/6] Updating and upgrading system...${RESET}"
 sudo apt-get update && sudo apt-get upgrade -y
 
-# Step 2: Install System Dependencies
-echo -e "${GREEN}[2/5] Installing system dependencies...${RESET}"
-sudo apt-get install -y git python3 python3-pip python3-venv nmap curl searchsploit nmcli smbclient
+# Step 3: Install System Dependencies
+echo -e "${GREEN}[3/6] Installing system dependencies...${RESET}"
+sudo apt-get install -y git python3 python3-pip python3-venv nmap curl searchsploit \
+    nmcli smbclient fbi libjpeg-dev libpng-dev
 
 # Verify if git is installed
 if ! command -v git &>/dev/null; then
@@ -31,21 +48,45 @@ else
     echo -e "${GREEN}pip3 is already installed.${RESET}"
 fi
 
-# Step 3: Install Python Dependencies
-echo -e "${GREEN}[3/5] Installing Python dependencies...${RESET}"
-
-# Create a virtual environment for Python (optional but recommended)
-#python3 -m venv xeno_env
-#source xeno_env/bin/activate
+# Step 4: Install Python Dependencies
+echo -e "${GREEN}[4/6] Installing Python dependencies...${RESET}"
 
 # Install required Python packages with --break-system-packages for sudo compatibility
-sudo pip3 install paramiko pysmb requests --break-system-packages
+sudo pip3 install paramiko pysmb requests pygame pillow --break-system-packages
 
-# Step 4: Verify Installations
-echo -e "${GREEN}[4/5] Verifying installations...${RESET}"
+# Verify Python libraries
+python3 - <<EOF
+try:
+    import paramiko
+    import smb.SMBConnection
+    import requests
+    import pygame
+    import PIL
+    print("${GREEN}All Python libraries installed correctly.${RESET}")
+except ImportError as e:
+    print("${RED}Missing Python library:${RESET}", e)
+EOF
+
+# Step 5: Configure Framebuffer and SDL Settings
+echo -e "${GREEN}[5/6] Configuring framebuffer and SDL settings...${RESET}"
+
+# Ensure framebuffer device is set for SDL applications
+if ! grep -q "SDL_FBDEV" ~/.bashrc; then
+    echo -e "${GREEN}Adding SDL framebuffer environment variables to .bashrc...${RESET}"
+    echo "export SDL_FBDEV=/dev/fb1" >> ~/.bashrc
+    echo "export SDL_VIDEODRIVER=fbcon" >> ~/.bashrc
+    echo "export SDL_NOMOUSE=1" >> ~/.bashrc  # Disable mouse cursor
+fi
+
+# Redirect console output away from the LCD
+echo -e "${GREEN}Redirecting console output to avoid interfering with framebuffer...${RESET}"
+sudo sed -i 's/$/ fbcon=map:0/' /boot/cmdline.txt
+
+# Step 6: Verify Installations
+echo -e "${GREEN}[6/6] Verifying installations...${RESET}"
 
 # Check for system tools
-for tool in git nmap searchsploit nmcli; do
+for tool in git nmap searchsploit nmcli fbi; do
     if ! command -v $tool &>/dev/null; then
         echo -e "${RED}[ERROR] $tool is not installed correctly.${RESET}"
     else
@@ -53,17 +94,15 @@ for tool in git nmap searchsploit nmcli; do
     fi
 done
 
-# Check for Python libraries
-python3 - <<EOF
-try:
-    import paramiko
-    import smb.SMBConnection
-    import requests
-    print("${GREEN}All Python libraries installed correctly.${RESET}")
-except ImportError as e:
-    print("${RED}Missing Python library:${RESET}", e)
-EOF
+# Verify framebuffer
+if [ -e /dev/fb1 ]; then
+    echo -e "${GREEN}Framebuffer device /dev/fb1 detected.${RESET}"
+else
+    echo -e "${RED}[ERROR] Framebuffer device /dev/fb1 not found. Check your LCD driver installation.${RESET}"
+fi
 
-# Step 5: Final Message
-echo -e "${GREEN}[5/5] All dependencies have been installed.${RESET}"
+# Final Message
+echo -e "${GREEN}All dependencies have been installed.${RESET}"
+echo -e "${GREEN}Repository cloned to $CLONE_DIR.${RESET}"
 echo -e "${GREEN}You can now proceed with setting up Xeno!${RESET}"
+echo -e "${GREEN}Reboot your system to apply changes.${RESET}"
