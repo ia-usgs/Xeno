@@ -8,6 +8,7 @@
 A Python-based tool for scanning, auditing, and performing penetration tests on Wi-Fi networks and connected devices. This project automates network scanning, reconnaissance, and security testing using custom scripts and external tools.
 
 reddit link: https://www.reddit.com/r/xenowificompanion/s/Yu8tJWnRLq
+If you wanna buy me a coffee: https://buymeacoffee.com/xenowificompanion
 
 ---
 
