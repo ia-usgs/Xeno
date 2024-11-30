@@ -82,7 +82,7 @@ anotheruser:anotherpassword
 Ensure proper permissions for directories used by the tool:
 
 ```bash
-chmod 700 utils/html_logs utils/json_logs
+chmod 777 utils/html_logs utils/json_logs
 ```
 
 ---
