@@ -39,6 +39,13 @@ reddit link: https://www.reddit.com/r/xenowificompanion/s/Yu8tJWnRLq
   - Generates detailed, structured reports of scan results.
 
 ---
+## **Parts list**
+  - Raspberry Pi (Recommended: Raspberry Pi 5, 4, 3B+, zero w, zero w2)
+  - MicroSD Card (Minimum: 16GB)
+  - Wi-Fi Adapter (Optional)
+  - Power Supply (5V, 3A Recommended)
+  - HDMI Display (Optional)
+  - 3.5-inch LCD Touchscreen
 
 ## **Installation**
 
