@@ -51,6 +51,8 @@ If you wanna buy me a coffee: https://buymeacoffee.com/xenowificompanion
 
 ## **Installation**
 
+### **Fastest way is to run install_file_test_no_desktop.sh from the get go (still in testing phase)**
+
 ### **1. Clone the Repository**
 
 To clone this repository, use the following command:
