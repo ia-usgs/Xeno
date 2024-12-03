@@ -1,7 +1,7 @@
 
 # **Xeno: Wi-Fi Companion**
 <div align="center">
-  <img src="xeno.png" alt="Xeno Interface" width="500">
+  <img src="xeno.png" alt="Xeno Interface" width="250">
 </div>
 
 
