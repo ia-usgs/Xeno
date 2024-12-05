@@ -93,7 +93,7 @@ anotheruser:anotherpassword
 Ensure proper permissions for directories used by the tool:
 
 ```bash
-chmod 777 utils/html_logs utils/json_logs
+sudo chmod -R 777 xeno
 ```
 
 ---
