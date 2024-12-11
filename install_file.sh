@@ -16,6 +16,15 @@ else
     echo -e "${GREEN}Git is already installed.${RESET}"
 fi
 
+# Check if pip is installed and install it if not
+if ! command -v pip &> /dev/null; then
+    echo -e "${YELLOW}Pip is not installed. Installing pip...${RESET}"
+    sudo apt-get update
+    sudo apt-get install -y python3-pip
+else
+    echo -e "${GREEN}Pip is already installed.${RESET}"
+fi
+
 # Step 1: Clone the Repository
 echo -e "${GREEN}[1/7] Cloning the Xeno repository...${RESET}"
 
