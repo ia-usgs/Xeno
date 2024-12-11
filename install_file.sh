@@ -23,24 +23,27 @@ echo -e "${GREEN}[1/7] Cloning the Xeno repository...${RESET}"
 REPO_URL="https://github.com/ia-usgs/Xeno.git"
 CLONE_DIR="/home/pi/xeno"
 
-# Check if the directory exists, and create it if necessary
-if [ ! -d "$CLONE_DIR" ]; then
-    echo -e "${GREEN}Creating /home/pi/xeno directory...${RESET}"
-    mkdir -p "$CLONE_DIR"
-fi
-
-# Check if the repository is already cloned
+# Check if the directory exists
 if [ -d "$CLONE_DIR" ]; then
-    echo -e "${GREEN}Xeno repository already exists at $CLONE_DIR. Pulling the latest changes...${RESET}"
-    git config --global --add safe.directory $CLONE_DIR
-    cd "$CLONE_DIR" && git pull
+    if [ -d "$CLONE_DIR/.git" ]; then
+        # If it's a valid Git repository, pull the latest changes
+        echo -e "${GREEN}Xeno repository already exists at $CLONE_DIR. Pulling the latest changes...${RESET}"
+        git config --global --add safe.directory "$CLONE_DIR"
+        cd "$CLONE_DIR" && git pull
+    else
+        # If the directory exists but is not a valid repository, delete and re-clone
+        echo -e "${RED}$CLONE_DIR exists but is not a valid Git repository. Re-cloning...${RESET}"
+        sudo rm -rf "$CLONE_DIR"
+        git clone "$REPO_URL" "$CLONE_DIR"
+    fi
 else
+    # If the directory doesn't exist, clone the repository
     echo -e "${GREEN}Cloning the repository into $CLONE_DIR...${RESET}"
     git clone "$REPO_URL" "$CLONE_DIR"
 fi
 
 # Set directory permissions to make it accessible to all users
-sudo chmod -R 777 /home/pi/xeno
+sudo chmod -R 777 "$CLONE_DIR"
 
 # Step 2: Update and Upgrade System
 echo -e "${GREEN}[2/7] Updating and upgrading system...${RESET}"
