@@ -1,6 +1,0 @@
-paramiko
-ftblib
-pysmb
-nmap
-scapy
-subprocess
