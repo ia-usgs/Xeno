@@ -184,6 +184,27 @@ if ! grep -q "/home/pi/xeno/main.py" ~/.bashrc; then
     echo "python3 /home/pi/xeno/main.py" >> ~/.bashrc
 fi
 
+# Configure Auto-Login for Raspberry Pi
+echo -e "${GREEN}[6.5/7] Configuring auto-login on boot...${RESET}"
+
+AUTOLOGIN_CONFIG="/etc/systemd/system/getty@tty1.service.d/override.conf"
+
+# Create or overwrite the override configuration to enable auto-login
+sudo mkdir -p "$(dirname $AUTOLOGIN_CONFIG)"
+sudo bash -c "cat > $AUTOLOGIN_CONFIG" <<EOF
+[Service]
+ExecStart=
+ExecStart=-/sbin/agetty --autologin pi --noclear %I \$TERM
+EOF
+
+# Reload systemd to apply changes
+sudo systemctl daemon-reload
+
+# Ensure getty service restarts
+sudo systemctl restart getty@tty1.service
+
+echo -e "${GREEN}Auto-login configuration complete.${RESET}"
+
 # Install and Configure LCD Driver
 echo -e "${GREEN}[7/7] Installing and configuring LCD driver...${RESET}"
 
