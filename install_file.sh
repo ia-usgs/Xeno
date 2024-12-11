@@ -190,33 +190,38 @@ echo -e "${GREEN}[7/7] Installing and configuring LCD driver...${RESET}"
 LCD_DRIVER_DIR="/home/pi/LCD-show"
 LCD_DRIVER_REPO="https://github.com/goodtft/LCD-show.git"
 
-# Check if the LCD driver directory exists
-if [ ! -d "$LCD_DRIVER_DIR" ]; then
-    echo -e "${GREEN}Cloning the LCD driver repository...${RESET}"
-    git clone "$LCD_DRIVER_REPO" "$LCD_DRIVER_DIR"
-fi
+# Check if the LCD driver installation script was already run
+if [ -f "/usr/local/bin/fbcp" ] && grep -q "fbcon=map:0" /boot/cmdline.txt; then
+    echo -e "${GREEN}LCD driver is already installed. Skipping installation...${RESET}"
+else
+    # Check if the LCD driver directory exists
+    if [ ! -d "$LCD_DRIVER_DIR" ]; then
+        echo -e "${GREEN}Cloning the LCD driver repository...${RESET}"
+        git clone "$LCD_DRIVER_REPO" "$LCD_DRIVER_DIR"
+    fi
 
-# Change to the LCD driver directory
-cd "$LCD_DRIVER_DIR"
+    # Change to the LCD driver directory
+    cd "$LCD_DRIVER_DIR"
 
-# Make the driver script executable
-sudo chmod +x LCD35-show
+    # Make the driver script executable
+    sudo chmod +x LCD35-show
 
-# Run the installation script with non-interactive mode
-echo -e "${GREEN}Running the LCD driver installation script...${RESET}"
-yes | sudo ./LCD35-show
+    # Run the installation script with non-interactive mode
+    echo -e "${GREEN}Running the LCD driver installation script...${RESET}"
+    yes | sudo ./LCD35-show
 
-# Install fbcp for framebuffer mirroring
-echo -e "${GREEN}Installing fbcp for framebuffer mirroring...${RESET}"
-sudo apt-get install -y cmake
-if [ ! -f /usr/local/bin/fbcp ]; then
-    git clone https://github.com/tasanakorn/rpi-fbcp.git /home/pi/rpi-fbcp
-    cd /home/pi/rpi-fbcp
-    mkdir build && cd build
-    cmake .. && make
-    sudo install fbcp /usr/local/bin/
+    # Install fbcp for framebuffer mirroring
+    echo -e "${GREEN}Installing fbcp for framebuffer mirroring...${RESET}"
+    sudo apt-get install -y cmake
+    if [ ! -f /usr/local/bin/fbcp ]; then
+        git clone https://github.com/tasanakorn/rpi-fbcp.git /home/pi/rpi-fbcp
+        cd /home/pi/rpi-fbcp
+        mkdir build && cd build
+        cmake .. && make
+        sudo install fbcp /usr/local/bin/
+    fi
 fi
 
 # Final Message and Reboot
-echo -e "${GREEN}LCD driver installed and framebuffer configured. The system will now reboot to apply changes.${RESET}"
+echo -e "${GREEN}LCD driver installation check complete. The system will now reboot to apply changes.${RESET}"
 sudo reboot
