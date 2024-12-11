@@ -61,7 +61,7 @@ sudo apt-get update && sudo apt-get upgrade -y
 # Step 3: Install System Dependencies
 echo -e "${GREEN}[3/7] Installing system dependencies...${RESET}"
 sudo apt-get install -y python3 python3-pip python3-venv curl \
-    nmcli smbclient libjpeg-dev libpng-dev nmap fbi macchanger net-tools
+    nmcli smbclient libjpeg-dev libpng-dev nmap fbi macchanger net-tools nmap
 
 # Attempt to install searchsploit using the package manager
 if ! sudo apt-get install -y exploitdb; then
