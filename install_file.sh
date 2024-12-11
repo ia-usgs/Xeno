@@ -154,14 +154,24 @@ sudo systemctl start xeno.service
 echo -e "${GREEN}[7/7] Installing and configuring LCD driver...${RESET}"
 
 LCD_DRIVER_DIR="/home/pi/LCD-show"
+LCD_DRIVER_REPO="https://github.com/goodtft/LCD-show.git"
+
+# Check if the LCD driver directory exists
 if [ ! -d "$LCD_DRIVER_DIR" ]; then
     echo -e "${GREEN}Cloning the LCD driver repository...${RESET}"
-    git clone https://github.com/goodtft/LCD-show.git "$LCD_DRIVER_DIR"
+    git clone "$LCD_DRIVER_REPO" "$LCD_DRIVER_DIR"
 fi
 
+# Change to the LCD driver directory
 cd "$LCD_DRIVER_DIR"
+
+# Make the driver script executable
 sudo chmod +x LCD35-show
-sudo ./LCD35-show
+
+# Run the installation script with non-interactive mode
+echo -e "${GREEN}Running the LCD driver installation script...${RESET}"
+yes | sudo ./LCD35-show
+
 
 # Final Message and Reboot
 echo -e "${GREEN}LCD driver installed. The system will now reboot to apply changes.${RESET}"
