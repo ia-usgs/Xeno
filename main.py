@@ -8,7 +8,7 @@ from attacks.recon import Recon
 from attacks.vulnerability_scan import VulnerabilityScanner
 from attacks.exploit_tester import ExploitTester
 from attacks.file_stealer import FileStealer
-
+import subprocess
 
 def load_ssh_credentials():
     """Load SSH credentials from either the config or root directory."""
@@ -130,7 +130,22 @@ def run_scans(logger, wifi_manager, html_logger):
                 logger.log(f"[SUCCESS] File stealing successful for IP: {ip}")
 
         wifi_manager.disconnect_wifi()
-
+     # Change MAC address after completing the scanning cycle
+    change_mac_address(logger)
+    
+def change_mac_address(logger):
+    """Change the MAC address of wlan0."""
+    try:
+        logger.log("[INFO] Changing MAC address for wlan0.")
+        # Bring down the interface
+        subprocess.run(["sudo", "ifconfig", "wlan0", "down"], check=True)
+        # Change the MAC address
+        subprocess.run(["sudo", "macchanger", "-r", "wlan0"], check=True)
+        # Bring up the interface
+        subprocess.run(["sudo", "ifconfig", "wlan0", "up"], check=True)
+        logger.log("[SUCCESS] MAC address changed successfully.")
+    except subprocess.CalledProcessError as e:
+        logger.log(f"[ERROR] Failed to change MAC address: {str(e)}")
 
 def main():
     os.makedirs("logs", exist_ok=True)
