@@ -61,7 +61,29 @@ sudo apt-get update && sudo apt-get upgrade -y
 # Step 3: Install System Dependencies
 echo -e "${GREEN}[3/7] Installing system dependencies...${RESET}"
 sudo apt-get install -y python3 python3-pip python3-venv curl \
-    nmcli smbclient libjpeg-dev libpng-dev nmap fbi macchanger net-tools nmap
+    nmcli smbclient libjpeg-dev libpng-dev nmap fbi macchanger net-tools
+
+# Update and install nmap
+sudo apt-get update
+sudo apt-get install -y nmap
+
+# Verify installation
+if command -v nmap &> /dev/null; then
+    echo -e "${GREEN}nmap installed successfully.${RESET}"
+else
+    echo -e "${RED}[ERROR] nmap installation failed. Please check your system and try again.${RESET}"
+    exit 1
+fi
+
+# Add nmap to PATH if necessary
+if ! echo "$PATH" | grep -q "/usr/bin"; then
+    echo -e "${GREEN}Adding /usr/bin to PATH...${RESET}"
+    export PATH=$PATH:/usr/bin
+    echo "export PATH=\$PATH:/usr/bin" >> ~/.bashrc
+    source ~/.bashrc
+fi
+
+echo -e "${GREEN}nmap is ready for use.${RESET}"
 
 # Attempt to install searchsploit using the package manager
 if ! sudo apt-get install -y exploitdb; then
