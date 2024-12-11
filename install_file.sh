@@ -159,7 +159,32 @@ EOF
 sudo systemctl enable xeno.service
 sudo systemctl start xeno.service
 
-# Step 7: Install and Configure LCD Driver
+# Step 7: Redirect Console and Set Up Framebuffer
+echo -e "${GREEN}[5/7] Configuring framebuffer and console output...${RESET}"
+
+# Update /boot/cmdline.txt to redirect console output
+sudo sed -i 's/$/ fbcon=map:0/' /boot/cmdline.txt
+
+# Ensure framebuffer device is set for SDL applications
+if ! grep -q "SDL_FBDEV" ~/.bashrc; then
+    echo -e "${GREEN}Adding SDL framebuffer environment variables to .bashrc...${RESET}"
+    echo "export SDL_FBDEV=/dev/fb1" >> ~/.bashrc
+    echo "export SDL_VIDEODRIVER=fbcon" >> ~/.bashrc
+fi
+
+# Add fbcp to /etc/rc.local for framebuffer mirroring
+if ! grep -q "fbcp" /etc/rc.local; then
+    echo -e "${GREEN}Adding fbcp to /etc/rc.local for framebuffer mirroring...${RESET}"
+    sudo sed -i -e '$i fbcp &\n' /etc/rc.local
+fi
+
+# Add command to automatically run the Xeno script on login for CLI
+if ! grep -q "/home/pi/xeno/main.py" ~/.bashrc; then
+    echo -e "${GREEN}Adding auto-run for Xeno script to .bashrc...${RESET}"
+    echo "python3 /home/pi/xeno/main.py" >> ~/.bashrc
+fi
+
+# Install and Configure LCD Driver
 echo -e "${GREEN}[7/7] Installing and configuring LCD driver...${RESET}"
 
 LCD_DRIVER_DIR="/home/pi/LCD-show"
@@ -181,7 +206,17 @@ sudo chmod +x LCD35-show
 echo -e "${GREEN}Running the LCD driver installation script...${RESET}"
 yes | sudo ./LCD35-show
 
+# Install fbcp for framebuffer mirroring
+echo -e "${GREEN}Installing fbcp for framebuffer mirroring...${RESET}"
+sudo apt-get install -y cmake
+if [ ! -f /usr/local/bin/fbcp ]; then
+    git clone https://github.com/tasanakorn/rpi-fbcp.git /home/pi/rpi-fbcp
+    cd /home/pi/rpi-fbcp
+    mkdir build && cd build
+    cmake .. && make
+    sudo install fbcp /usr/local/bin/
+fi
 
 # Final Message and Reboot
-echo -e "${GREEN}LCD driver installed. The system will now reboot to apply changes.${RESET}"
+echo -e "${GREEN}LCD driver installed and framebuffer configured. The system will now reboot to apply changes.${RESET}"
 sudo reboot
