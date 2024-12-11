@@ -14,6 +14,12 @@ echo -e "${GREEN}[1/7] Cloning the Xeno repository...${RESET}"
 REPO_URL="https://github.com/ia-usgs/Xeno.git"
 CLONE_DIR="/home/pi/xeno"
 
+# Check if the directory exists, and create it if necessary
+if [ ! -d "$CLONE_DIR" ]; then
+    echo -e "${GREEN}Creating /home/pi/xeno directory...${RESET}"
+    mkdir -p "$CLONE_DIR"
+fi
+
 # Check if the repository is already cloned
 if [ -d "$CLONE_DIR" ]; then
     echo -e "${GREEN}Xeno repository already exists at $CLONE_DIR. Pulling the latest changes...${RESET}"
