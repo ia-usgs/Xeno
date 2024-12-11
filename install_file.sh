@@ -7,6 +7,15 @@ RESET="\033[0m"
 
 echo -e "${GREEN}Starting dependency installation for Xeno (Non-Desktop)...${RESET}"
 
+# Check if git is installed and install it if not
+if ! command -v git &> /dev/null; then
+    echo -e "${YELLOW}Git is not installed. Installing git...${RESET}"
+    sudo apt-get update
+    sudo apt-get install -y git
+else
+    echo -e "${GREEN}Git is already installed.${RESET}"
+fi
+
 # Step 1: Clone the Repository
 echo -e "${GREEN}[1/7] Cloning the Xeno repository...${RESET}"
 
@@ -39,7 +48,7 @@ sudo apt-get update && sudo apt-get upgrade -y
 
 # Step 3: Install System Dependencies
 echo -e "${GREEN}[3/7] Installing system dependencies...${RESET}"
-sudo apt-get install -y git python3 python3-pip python3-venv curl \
+sudo apt-get install -y python3 python3-pip python3-venv curl \
     nmcli smbclient libjpeg-dev libpng-dev nmap fbi
 
 # Attempt to install searchsploit using the package manager
