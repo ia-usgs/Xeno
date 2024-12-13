@@ -120,7 +120,7 @@ def run_scans(logger, wifi_manager, html_logger):
                     target_ip=ip,
                     username=creds["username"],
                     password=creds["password"],
-                    directories=["/etc", "/home"],
+                    directories=["/etc", "/home"], #modify here to select target directories, doesnt have to be linux
                     file_extensions=[".conf", ".txt", ".log"],
                 ):
                     successful = True
