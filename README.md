@@ -58,8 +58,8 @@ If you wanna buy me a coffee: https://buymeacoffee.com/xenowificompanion
 To clone this repository, use the following command:
 
 ```bash
-git clone https://github.com/yourusername/Xeno-Wifi-Companion.git
-cd Xeno-Wifi-Companion
+git clone https://github.com/ia-usgs/Xeno.git
+cd Xeno
 ```
 
 ---
