@@ -9,7 +9,7 @@ A Python-based tool for scanning, auditing, and performing penetration tests on 
 
 reddit link: https://www.reddit.com/r/xenowificompanion/s/Yu8tJWnRLq
 
-If you wanna buy me a coffee: https://buymeacoffee.com/xenowificompanion
+If you'd like to show some love and support <3 : https://buymeacoffee.com/xenowificompanion
 
 ---
 
@@ -220,7 +220,11 @@ sudo journalctl -u xeno.service -f
 - Modify `main.py` to include custom workflows.
 
 ---
+### Contributions
 
+I welcome any contributions! The whole point of this project is to make it available to the community and have it grow. 
+
+Please feel free to contact me on Reddit.
 ## **Disclaimer**
 
 This project is intended for educational and ethical penetration testing purposes only. Unauthorized use on networks or devices without proper authorization is illegal and punishable by law.
