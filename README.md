@@ -58,7 +58,7 @@ For love and support: [Buy Me a Coffee](https://buymeacoffee.com/xenowificompani
 
 ### **Automatic Installation (Recommended)**
 
-Be sure to use the non desktop 64 but version!!!!
+Be sure to use the non desktop 64 bit version!!!!
 
 1. Clone the repository and run the installation script:
    ```bash
