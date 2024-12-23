@@ -53,8 +53,6 @@ fi
 
 # Set directory permissions to make it accessible to all users
 sudo chmod -R 777 "$CLONE_DIR"
-
-# Ensure the logs directory is owned by the pi user
 sudo chown -R pi:pi /home/pi/xeno/logs
 sudo chown -R pi:pi /home/pi/xeno/utils
 
