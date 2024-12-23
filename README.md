@@ -58,11 +58,13 @@ For love and support: [Buy Me a Coffee](https://buymeacoffee.com/xenowificompani
 
 ### **Automatic Installation (Recommended)**
 
+Be sure to use the non desktop 64 but version!!!!
+
 1. Clone the repository and run the installation script:
    ```bash
    git clone https://github.com/ia-usgs/Xeno.git
    cd Xeno
-   sudo chmod 777 insall_file.sh
+   sudo chmod 777 install_file.sh
    sudo ./install_file.sh
    ```
 
