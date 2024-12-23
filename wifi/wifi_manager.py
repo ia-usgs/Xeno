@@ -11,7 +11,17 @@ class WiFiManager:
         self.logger = logger if logger else Logger()
 
     def ensure_wlan0_active(self):
-        """Ensure the wlan0 interface is active."""
+        """
+        Ensure the wlan0 interface is active and set to managed mode.
+
+        Workflow:
+            - Checks the status of the Wi-Fi interface using `nmcli`.
+            - Activates and sets the interface to managed mode if it is inactive.
+
+        Raises:
+            subprocess.CalledProcessError: If an error occurs while interacting with the `nmcli` command.
+        """
+
         try:
             self.logger.log(f"Checking if {self.interface} is active.")
             result = subprocess.run(["sudo", "nmcli", "dev", "status"], stdout=subprocess.PIPE, text=True)
@@ -22,7 +32,17 @@ class WiFiManager:
             self.logger.log(f"[ERROR] Error ensuring {self.interface} is active: {e}")
 
     def disconnect_wifi(self):
-        """Disconnect the current Wi-Fi connection."""
+        """
+        Disconnect the current Wi-Fi connection.
+
+        Workflow:
+            - Uses `nmcli` to disconnect the specified Wi-Fi interface.
+            - Logs the result of the disconnection attempt.
+
+        Raises:
+            subprocess.CalledProcessError: If an error occurs during the disconnection process.
+        """
+
         try:
             self.logger.log("[INFO] Disconnecting Wi-Fi interface.")
             result = subprocess.run(
@@ -40,8 +60,26 @@ class WiFiManager:
 
     def connect_to_wifi(self, ssid, password, retry_attempts=3):
         """
-        Connect to a Wi-Fi network using nmcli with retry logic.
+        Connect to a Wi-Fi network using `nmcli`, with retry logic.
+
+        Parameters:
+            ssid (str): The name of the Wi-Fi network to connect to.
+            password (str): The password for the Wi-Fi network.
+            retry_attempts (int, optional): The number of retry attempts (default: 3).
+
+        Returns:
+            bool: True if the connection is successful, False otherwise.
+
+        Workflow:
+            - Ensures the Wi-Fi interface is active.
+            - Rescans available Wi-Fi networks before attempting a connection.
+            - Tries to connect to the specified SSID with the provided password.
+            - Logs the outcome of each attempt and retries if the connection fails.
+
+        Raises:
+            subprocess.CalledProcessError: If an error occurs while executing the `nmcli` command.
         """
+
         self.ensure_wlan0_active()
 
         for attempt in range(retry_attempts):
@@ -71,7 +109,20 @@ class WiFiManager:
         return False
 
     def run_scan(self):
-        """Run a Wi-Fi scan and return the results."""
+        """
+        Run a scan to detect available Wi-Fi networks.
+
+        Returns:
+            str: The raw output of the `nmcli` command listing available networks.
+
+        Workflow:
+            - Executes the `nmcli` command to list available Wi-Fi networks.
+            - Logs the scan results.
+
+        Raises:
+            subprocess.CalledProcessError: If the scan process fails.
+        """
+
         try:
             self.logger.log("[INFO] Scanning for Wi-Fi networks.")
             result = subprocess.run(["sudo", "nmcli", "dev", "wifi", "list"], stdout=subprocess.PIPE, text=True)
@@ -82,7 +133,23 @@ class WiFiManager:
             return ""
 
     def load_wifi_credentials(self):
-        """Load Wi-Fi credentials from a JSON file."""
+        """
+        Load Wi-Fi credentials from a JSON file.
+
+        Returns:
+            list: A list of dictionaries containing Wi-Fi credentials, where each dictionary has:
+                  - SSID (str): The name of the Wi-Fi network.
+                  - Password (str): The password for the Wi-Fi network.
+
+        Workflow:
+            - Reads the credentials from `config/wifi_credentials.json`.
+            - Logs the result of the loading operation.
+
+        Raises:
+            FileNotFoundError: If the credentials file is not found.
+            json.JSONDecodeError: If the credentials file contains invalid JSON.
+        """
+
         credentials_file = Path("config/wifi_credentials.json")
         try:
             with open(credentials_file, "r") as file:
@@ -98,8 +165,18 @@ class WiFiManager:
 
     def handle_network_transition(self, ssid, password):
         """
-        Handle the complete process of disconnecting, connecting, and rescanning.
+        Handle the process of disconnecting from the current network, connecting to a new one, and rescanning.
+
+        Parameters:
+            ssid (str): The name of the Wi-Fi network to transition to.
+            password (str): The password for the Wi-Fi network.
+
+        Workflow:
+            - Disconnects from the current Wi-Fi network.
+            - Attempts to connect to the specified SSID with the provided password.
+            - Logs the outcome of the transition process.
         """
+
         self.logger.log(f"[INFO] Handling network transition for SSID: {ssid}")
         self.disconnect_wifi()
         if self.connect_to_wifi(ssid, password):
