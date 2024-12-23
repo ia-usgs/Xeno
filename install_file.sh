@@ -54,6 +54,9 @@ fi
 # Set directory permissions to make it accessible to all users
 sudo chmod -R 777 "$CLONE_DIR"
 
+# Ensure the logs directory is owned by the pi user
+sudo chown -R pi:pi /home/pi/xeno/logs
+
 # Step 2: Update and Upgrade System
 echo -e "${GREEN}[2/7] Updating and upgrading system...${RESET}"
 sudo apt-get update && sudo apt-get upgrade -y
