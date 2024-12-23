@@ -1,14 +1,26 @@
 import subprocess
 from utils.html_logger import HTMLLogger
 from utils.logger import Logger
-
+import re
 
 class Recon:
     def __init__(self, logger=None):
         self.logger = logger if logger else Logger()
 
     def ping_target(self, target):
-        """Ping the target to ensure it is reachable."""
+        """
+        Ping the target device to ensure it is reachable.
+
+        Parameters:
+            target (str): The IP address or hostname of the target device.
+
+        Returns:
+            bool: True if the target is reachable, False otherwise.
+
+        Raises:
+            subprocess.CalledProcessError: If the `ping` command fails or encounters an error.
+        """
+
         try:
             self.logger.log(f"[INFO] Pinging target: {target}")
             result = subprocess.run(
@@ -28,7 +40,21 @@ class Recon:
             return False
 
     def scan_ports(self, target, timeout=60):
-        """Perform a detailed port scan using nmap."""
+        """
+        Perform a detailed port scan on the target device using `nmap`.
+
+        Parameters:
+            target (str): The IP address or hostname of the target device.
+            timeout (int, optional): The timeout in seconds for the scan. Defaults to 60 seconds.
+
+        Returns:
+            str or None: The output of the `nmap` command if successful, otherwise None.
+
+        Raises:
+            subprocess.TimeoutExpired: If the port scan exceeds the specified timeout.
+            subprocess.CalledProcessError: If the `nmap` command fails or encounters an error.
+        """
+
         try:
             self.logger.log(f"[INFO] Scanning ports on target: {target} with a timeout of {timeout} seconds")
             result = subprocess.run(
@@ -48,7 +74,21 @@ class Recon:
             return None
 
     def enumerate_services(self, target, timeout=60):
-        """Enumerate services and versions on open ports."""
+        """
+        Enumerate services and their versions on open ports of the target device.
+
+        Parameters:
+            target (str): The IP address or hostname of the target device.
+            timeout (int, optional): The timeout in seconds for the scan. Defaults to 60 seconds.
+
+        Returns:
+            str or None: The output of the `nmap` service enumeration command if successful, otherwise None.
+
+        Raises:
+            subprocess.TimeoutExpired: If the service enumeration exceeds the specified timeout.
+            subprocess.CalledProcessError: If the `nmap` command fails or encounters an error.
+        """
+
         try:
             self.logger.log(f"[INFO] Enumerating services on target: {target} with a timeout of {timeout} seconds")
             result = subprocess.run(
@@ -68,7 +108,21 @@ class Recon:
             return None
 
     def detect_os(self, target, timeout=60):
-        """Perform OS detection using nmap."""
+        """
+        Perform operating system detection on the target device using `nmap`.
+
+        Parameters:
+            target (str): The IP address or hostname of the target device.
+            timeout (int, optional): The timeout in seconds for the scan. Defaults to 60 seconds.
+
+        Returns:
+            str or None: The detected operating system name if successful, otherwise None.
+
+        Raises:
+            subprocess.TimeoutExpired: If the OS detection exceeds the specified timeout.
+            subprocess.CalledProcessError: If the `nmap` command fails or encounters an error.
+        """
+
         try:
             self.logger.log(f"[INFO] Detecting OS on target: {target} with a timeout of {timeout} seconds")
             result = subprocess.run(
@@ -78,8 +132,19 @@ class Recon:
                 text=True,
                 timeout=timeout,  # Add timeout here
             )
-            self.logger.log(f"[INFO] OS detection result for {target}:\n{result.stdout}")
-            return result.stdout
+
+            os_output = result.stdout
+            self.logger.log(f"[INFO] OS detection result for {target}:\n{os_output}")
+
+            # Parse Nmap output to extract OS information
+            match = re.search(r"Running: ([^\n]*)", os_output)
+            if match:
+                detected_os = match.group(1).strip()
+                self.logger.log(f"[INFO] Detected OS for {target}: {detected_os}")
+                return detected_os
+            else:
+                self.logger.log(f"[WARNING] No OS information detected for {target}.")
+                return None
         except subprocess.TimeoutExpired:
             self.logger.log(f"[WARNING] OS detection for {target} timed out after {timeout} seconds.")
             return None
@@ -88,7 +153,32 @@ class Recon:
             return None
 
     def run_full_recon(self, target, ssid=None, html_logger=None):
-        """Run all reconnaissance tasks on the target."""
+        """
+        Run a full reconnaissance workflow on the target device.
+
+        Parameters:
+            target (str): The IP address or hostname of the target device.
+            ssid (str, optional): The SSID of the current Wi-Fi network.
+            html_logger (HTMLLogger, optional): An instance of the HTMLLogger class for recording results.
+
+        Workflow:
+            1. Ping the target to ensure it is reachable.
+            2. Perform a detailed port scan to identify open ports.
+            3. Enumerate services and versions running on open ports.
+            4. Perform OS detection on the target device.
+            5. Log and optionally append the results to an HTML report.
+
+        Returns:
+            dict: A dictionary containing reconnaissance results, including:
+                  - target (str): The target IP or hostname.
+                  - port_scan (str): The port scan results.
+                  - service_enum (str): The service enumeration results.
+                  - os_detection (str): The OS detection results.
+
+        Raises:
+            Exception: If any critical error occurs during the reconnaissance process.
+        """
+
         self.logger.log(f"[INFO] Starting full reconnaissance on target: {target}")
 
         # Ping target
