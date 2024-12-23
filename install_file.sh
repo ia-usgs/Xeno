@@ -53,8 +53,7 @@ fi
 
 # Set directory permissions to make it accessible to all users
 sudo chmod -R 777 "$CLONE_DIR"
-sudo chown -R pi:pi /home/pi/xeno/logs
-sudo chown -R pi:pi /home/pi/xeno/utils
+sudo chown -R pi:pi /home/pi/xeno
 
 # Step 2: Update and Upgrade System
 echo -e "${GREEN}[2/7] Updating and upgrading system...${RESET}"
