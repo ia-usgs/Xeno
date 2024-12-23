@@ -60,30 +60,8 @@ sudo apt-get update && sudo apt-get upgrade -y
 
 # Step 3: Install System Dependencies
 echo -e "${GREEN}[3/7] Installing system dependencies...${RESET}"
-sudo apt-get install -y python3 python3-pip python3-venv curl \
-    nmcli smbclient libjpeg-dev libpng-dev nmap fbi macchanger net-tools network-manager
-
-# Update and install nmap
-sudo apt-get update
-sudo apt-get install -y nmap
-
-# Verify installation
-if command -v nmap &> /dev/null; then
-    echo -e "${GREEN}nmap installed successfully.${RESET}"
-else
-    echo -e "${RED}[ERROR] nmap installation failed. Please check your system and try again.${RESET}"
-    exit 1
-fi
-
-# Add nmap to PATH if necessary
-if ! echo "$PATH" | grep -q "/usr/bin"; then
-    echo -e "${GREEN}Adding /usr/bin to PATH...${RESET}"
-    export PATH=$PATH:/usr/bin
-    echo "export PATH=\$PATH:/usr/bin" >> ~/.bashrc
-    source ~/.bashrc
-fi
-
-echo -e "${GREEN}nmap is ready for use.${RESET}"
+sudo apt-get install -y git python3 python3-pip python3-venv curl dnsutils macchanger \
+    smbclient libjpeg-dev libpng-dev nmap fbi network-manager
 
 # Attempt to install searchsploit using the package manager
 if ! sudo apt-get install -y exploitdb; then
@@ -120,7 +98,68 @@ fi
 
 # Step 4: Install Python Dependencies
 echo -e "${GREEN}[4/7] Installing Python dependencies...${RESET}"
-sudo pip3 install python-nmap pyexploitdb paramiko pysmb requests pygame pillow --break-system-packages
+sudo pip3 install python-nmap pyexploitdb paramiko pysmb requests pygame pillow pandas shodan requests-futures colorama python-whois dnsrecon --break-system-packages
+
+# Step 4.1: Manually Install Shodan
+echo -e "${GREEN}[4.1] Installing Shodan manually...${RESET}"
+
+# Clone Shodan from its repository (if applicable) or install using pip
+if ! pip3 list | grep -q shodan; then
+    echo -e "${GREEN}Installing Shodan package...${RESET}"
+    sudo pip3 install shodan --break-system-packages
+else
+    echo -e "${GREEN}Shodan is already installed.${RESET}"
+fi
+
+# Step 4.2: Verify Shodan Installation
+echo -e "${GREEN}[4.2] Verifying Shodan installation...${RESET}"
+python3 - <<EOF
+try:
+    import shodan
+    print("${GREEN}Shodan installed correctly.${RESET}")
+except ImportError as e:
+    print("${RED}Shodan installation failed. Please check manually.${RESET}", e)
+EOF
+
+# Step 4.3: Install and Configure theHarvester
+echo -e "${GREEN}[4.3] Installing and configuring theHarvester...${RESET}"
+
+# Define the directory for theHarvester
+THE_HARVESTER_DIR="/home/pi/xeno/theHarvester"
+
+# Remove any previous installation
+if [ -d "$THE_HARVESTER_DIR" ]; then
+    echo -e "${GREEN}Removing existing theHarvester directory...${RESET}"
+    sudo rm -rf "$THE_HARVESTER_DIR"
+fi
+
+# Clone the theHarvester repository
+echo -e "${GREEN}Cloning theHarvester repository...${RESET}"
+git clone https://github.com/laramies/theHarvester.git "$THE_HARVESTER_DIR"
+
+# Change to theHarvester directory
+cd "$THE_HARVESTER_DIR"
+
+# Install dependencies with --break-system-packages
+echo -e "${GREEN}Installing theHarvester dependencies...${RESET}"
+sudo pip3 install -r requirements/base.txt --break-system-packages
+
+# Add an alias for theHarvester to make it accessible system-wide
+if ! grep -q "alias theharvester=" ~/.bashrc; then
+    echo "alias theharvester='python3 $THE_HARVESTER_DIR/theHarvester.py'" >> ~/.bashrc
+    echo -e "${GREEN}Added alias for theHarvester to .bashrc.${RESET}"
+fi
+
+# Apply alias changes
+source ~/.bashrc
+
+# Verify theHarvester installation
+echo -e "${GREEN}Verifying theHarvester installation...${RESET}"
+python3 "$THE_HARVESTER_DIR/theHarvester.py" -h
+
+# Test the alias
+echo -e "${GREEN}Testing theHarvester alias...${RESET}"
+theharvester -h
 
 # Verify Python libraries
 python3 - <<EOF
@@ -177,94 +216,114 @@ Environment="SDL_VIDEODRIVER=fbcon"
 WantedBy=multi-user.target
 EOF
 
-# Enable and start the service
+# Enable the service (do not start yet)
+echo -e "${GREEN}Enabling Xeno service but not starting it yet.${RESET}"
 sudo systemctl enable xeno.service
-sudo systemctl start xeno.service
 
 # Step 7: Redirect Console and Set Up Framebuffer
-echo -e "${GREEN}[5/7] Configuring framebuffer and console output...${RESET}"
-
-# Update /boot/cmdline.txt to redirect console output
-sudo sed -i 's/$/ fbcon=map:0/' /boot/cmdline.txt
-
-# Ensure framebuffer device is set for SDL applications
-if ! grep -q "SDL_FBDEV" ~/.bashrc; then
-    echo -e "${GREEN}Adding SDL framebuffer environment variables to .bashrc...${RESET}"
-    echo "export SDL_FBDEV=/dev/fb1" >> ~/.bashrc
-    echo "export SDL_VIDEODRIVER=fbcon" >> ~/.bashrc
-fi
-
-# Add fbcp to /etc/rc.local for framebuffer mirroring
-if ! grep -q "fbcp" /etc/rc.local; then
-    echo -e "${GREEN}Adding fbcp to /etc/rc.local for framebuffer mirroring...${RESET}"
-    sudo sed -i -e '$i fbcp &\n' /etc/rc.local
-fi
-
-# Add command to automatically run the Xeno script on login for CLI
-if ! grep -q "/home/pi/xeno/main.py" ~/.bashrc; then
-    echo -e "${GREEN}Adding auto-run for Xeno script to .bashrc...${RESET}"
-    echo "python3 /home/pi/xeno/main.py" >> ~/.bashrc
-fi
-
-# Configure Auto-Login for Raspberry Pi
-echo -e "${GREEN}[6.5/7] Configuring auto-login on boot...${RESET}"
-
-AUTOLOGIN_CONFIG="/etc/systemd/system/getty@tty1.service.d/override.conf"
-
-# Create or overwrite the override configuration to enable auto-login
-sudo mkdir -p "$(dirname $AUTOLOGIN_CONFIG)"
-sudo bash -c "cat > $AUTOLOGIN_CONFIG" <<EOF
-[Service]
-ExecStart=
-ExecStart=-/sbin/agetty --autologin pi --noclear %I \$TERM
-EOF
-
-# Reload systemd to apply changes
-sudo systemctl daemon-reload
-
-# Ensure getty service restarts
-sudo systemctl restart getty@tty1.service
-
-echo -e "${GREEN}Auto-login configuration complete.${RESET}"
-
-# Install and Configure LCD Driver
 echo -e "${GREEN}[7/7] Installing and configuring LCD driver...${RESET}"
 
-LCD_DRIVER_DIR="/home/pi/LCD-show"
-LCD_DRIVER_REPO="https://github.com/goodtft/LCD-show.git"
+# Prompt for LCD Installation
+echo -e "${GREEN}Do you want to install and configure the LCD screen? (y/n)${RESET}"
+read -r install_lcd
 
-# Check if the LCD driver installation script was already run
-if [ -f "/usr/local/bin/fbcp" ] && grep -q "fbcon=map:0" /boot/cmdline.txt; then
-    echo -e "${GREEN}LCD driver is already installed. Skipping installation...${RESET}"
+if [[ "$install_lcd" =~ ^[Yy]$ ]]; then
+    # Update /boot/cmdline.txt to redirect console output
+    sudo sed -i 's/$/ fbcon=map:0/' /boot/cmdline.txt
+
+    # Ensure framebuffer device is set for SDL applications
+    if ! grep -q "SDL_FBDEV" ~/.bashrc; then
+        echo -e "${GREEN}Adding SDL framebuffer environment variables to .bashrc...${RESET}"
+        echo "export SDL_FBDEV=/dev/fb1" >> ~/.bashrc
+        echo "export SDL_VIDEODRIVER=fbcon" >> ~/.bashrc
+    fi
+
+    # Install and Configure LCD Driver
+    LCD_DRIVER_DIR="/home/pi/LCD-show"
+    LCD_DRIVER_REPO="https://github.com/goodtft/LCD-show.git"
+
+    # Check if the LCD driver installation script was already run
+    if [ -f "/usr/local/bin/fbcp" ] && grep -q "fbcon=map:0" /boot/cmdline.txt; then
+        echo -e "${GREEN}LCD driver is already installed. Skipping installation...${RESET}"
+    else
+        # Check if the LCD driver directory exists
+        if [ ! -d "$LCD_DRIVER_DIR" ]; then
+            echo -e "${GREEN}Cloning the LCD driver repository...${RESET}"
+            git clone "$LCD_DRIVER_REPO" "$LCD_DRIVER_DIR"
+        fi
+
+        # Change to the LCD driver directory
+        cd "$LCD_DRIVER_DIR"
+
+        # Make the driver script executable
+        sudo chmod +x LCD35-show
+
+        # Run the installation script with non-interactive mode
+        echo -e "${GREEN}Running the LCD driver installation script...${RESET}"
+        yes | sudo ./LCD35-show
+
+        # Install fbcp for framebuffer mirroring
+        echo -e "${GREEN}Installing fbcp for framebuffer mirroring...${RESET}"
+        sudo apt-get install -y cmake
+        if [ ! -f /usr/local/bin/fbcp ]; then
+            git clone https://github.com/tasanakorn/rpi-fbcp.git /home/pi/rpi-fbcp
+            cd /home/pi/rpi-fbcp
+            mkdir build && cd build
+            cmake .. && make
+            sudo install fbcp /usr/local/bin/
+        fi
+    fi
+
+    # Final Message and Reboot
+    echo -e "${GREEN}LCD driver installation check complete. The system will now reboot to apply changes.${RESET}"
+    sudo reboot
 else
-    # Check if the LCD driver directory exists
-    if [ ! -d "$LCD_DRIVER_DIR" ]; then
-        echo -e "${GREEN}Cloning the LCD driver repository...${RESET}"
-        git clone "$LCD_DRIVER_REPO" "$LCD_DRIVER_DIR"
-    fi
-
-    # Change to the LCD driver directory
-    cd "$LCD_DRIVER_DIR"
-
-    # Make the driver script executable
-    sudo chmod +x LCD35-show
-
-    # Run the installation script with non-interactive mode
-    echo -e "${GREEN}Running the LCD driver installation script...${RESET}"
-    yes | sudo ./LCD35-show
-
-    # Install fbcp for framebuffer mirroring
-    echo -e "${GREEN}Installing fbcp for framebuffer mirroring...${RESET}"
-    sudo apt-get install -y cmake
-    if [ ! -f /usr/local/bin/fbcp ]; then
-        git clone https://github.com/tasanakorn/rpi-fbcp.git /home/pi/rpi-fbcp
-        cd /home/pi/rpi-fbcp
-        mkdir build && cd build
-        cmake .. && make
-        sudo install fbcp /usr/local/bin/
-    fi
+    echo -e "${GREEN}Skipping LCD installation. Proceeding with other setup steps.${RESET}"
 fi
 
-# Final Message and Reboot
-echo -e "${GREEN}LCD driver installation check complete. The system will now reboot to apply changes.${RESET}"
-sudo reboot
+# Step 8: Install e-Paper Display Drivers
+echo -e "${GREEN}[8/8] Do you want to install and configure the e-Paper display drivers? (y/n)${RESET}"
+read -r install_epaper
+
+if [[ "$install_epaper" =~ ^[Yy]$ ]]; then
+    echo -e "${GREEN}Installing and configuring e-Paper display drivers...${RESET}"
+
+    # Enable SPI Interface
+    sudo raspi-config nonint do_spi 0
+
+    # Check /boot/config.txt for SPI enablement
+    if ! grep -q "dtparam=spi=on" /boot/config.txt; then
+        echo -e "${GREEN}Enabling SPI in /boot/config.txt...${RESET}"
+        echo "dtparam=spi=on" | sudo tee -a /boot/config.txt
+    fi
+
+    # Install lg library
+    echo -e "${GREEN}Installing lg library...${RESET}"
+    wget https://github.com/joan2937/lg/archive/master.zip
+    unzip master.zip
+    cd lg-master
+    make
+    sudo make install
+
+    # Install gpiod library (optional)
+    echo -e "${GREEN}Installing gpiod library...${RESET}"
+    sudo apt-get update
+    sudo apt-get install -y gpiod libgpiod-dev
+
+    # Install BCM2835 library
+    echo -e "${GREEN}Installing BCM2835 library...${RESET}"
+    wget http://www.airspayce.com/mikem/bcm2835/bcm2835-1.71.tar.gz
+    tar zxvf bcm2835-1.71.tar.gz
+    cd bcm2835-1.71/
+    sudo ./configure && sudo make && sudo make check && sudo make install
+
+    # Install WiringPi
+    echo -e "${GREEN}Installing WiringPi...${RESET}"
+    git clone https://github.com/WiringPi/WiringPi
+    cd WiringPi
+    ./build
+    gpio -v
+else
+    echo -e "${GREEN}Skipping e-Paper installation. Proceeding with other setup steps.${RESET}"
+fi
+
