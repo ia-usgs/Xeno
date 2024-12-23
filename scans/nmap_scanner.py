@@ -5,8 +5,22 @@ from utils.logger import Logger
 
 def run_nmap_scan(target, logger=None):
     """
-    Run an nmap scan on the specified target and extract discovered IPs.
-    """
+        Run a basic `nmap` scan to discover devices on a target network.
+
+        Parameters:
+            target (str): The target network or IP range to scan (e.g., "192.168.1.0/24").
+            logger (Logger, optional): An instance of the Logger class for logging activities.
+                                       If none is provided, a new Logger instance is created.
+
+        Returns:
+            dict: A dictionary containing:
+                  - discovered_ips (list): A list of IP addresses discovered during the scan.
+                  - raw_output (str): The raw output from the `nmap` command.
+
+        Raises:
+            subprocess.CalledProcessError: If the `nmap` command fails or encounters an error.
+        """
+
     if logger is None:
         logger = Logger()
 
