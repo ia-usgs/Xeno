@@ -5,13 +5,41 @@ from datetime import datetime
 
 class HTMLLogger:
     def __init__(self, output_dir="utils/html_logs", json_dir="utils/json_logs"):
+        """
+        Initialize the HTMLLogger class.
+
+        Parameters:
+            output_dir (str, optional): The directory where HTML logs will be saved.
+                                        Defaults to "utils/html_logs".
+            json_dir (str, optional): The directory where JSON logs will be saved.
+                                      Defaults to "utils/json_logs".
+
+        Workflow:
+            - Creates the specified directories for HTML and JSON logs if they do not already exist.
+        """
+
         self.output_dir = output_dir
         self.json_dir = json_dir
         os.makedirs(self.output_dir, exist_ok=True)
         os.makedirs(self.json_dir, exist_ok=True)
 
     def save_scan_result_to_json(self, ssid, scan_result):
-        """Save scan results to a JSON file."""
+        """
+        Save scan results to a JSON file.
+
+        Parameters:
+            ssid (str): The SSID of the Wi-Fi network associated with the scan results.
+            scan_result (str): The raw output or processed result of the scan.
+
+        Workflow:
+            - Loads existing data from the corresponding JSON file, if it exists.
+            - Appends the new scan result with a timestamp to the JSON data.
+            - Saves the updated JSON data back to the file.
+
+        Returns:
+            str: The path to the JSON file where the scan results were saved.
+        """
+
         json_file = os.path.join(self.json_dir, f"{ssid}.json")
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
@@ -33,7 +61,21 @@ class HTMLLogger:
         return json_file
 
     def generate_html_from_json(self, ssid):
-        """Generate or update the HTML log from the JSON file."""
+        """
+        Generate or update an HTML log based on a JSON file.
+
+        Parameters:
+            ssid (str): The SSID of the Wi-Fi network associated with the scan results.
+
+        Workflow:
+            - Reads scan results from the corresponding JSON file.
+            - Generates an HTML file with the scan results formatted as entries.
+            - Saves or updates the HTML file in the specified output directory.
+
+        Raises:
+            Warning: If the JSON file for the specified SSID does not exist.
+        """
+
         json_file = os.path.join(self.json_dir, f"{ssid}.json")
         html_file = os.path.join(self.output_dir, f"{ssid}.html")
 
@@ -92,7 +134,19 @@ class HTMLLogger:
         print(f"[INFO] HTML log updated: {html_file}")
 
     def append_recon_results_to_html(self, ssid, recon_results):
-        """Append reconnaissance results to the existing HTML log."""
+        """
+        Append reconnaissance results to the existing HTML log.
+
+        Parameters:
+            ssid (str): The SSID of the Wi-Fi network associated with the reconnaissance results.
+            recon_results (dict): A dictionary containing the reconnaissance data to append.
+
+        Workflow:
+            - Loads or creates a JSON log for the specified SSID.
+            - Appends the reconnaissance results with a timestamp to the JSON data.
+            - Updates the corresponding HTML log to include the new data.
+        """
+
         json_file = os.path.join(self.json_dir, f"{ssid}.json")
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
@@ -117,7 +171,19 @@ class HTMLLogger:
         self.generate_html_from_json(ssid)
 
     def append_vulnerability_results_to_html(self, ssid, vulnerability_results):
-        """Append vulnerability scan results to the existing HTML log."""
+        """
+        Append vulnerability scan results to the existing HTML log.
+
+        Parameters:
+            ssid (str): The SSID of the Wi-Fi network associated with the vulnerability results.
+            vulnerability_results (dict): A dictionary containing the vulnerability data to append.
+
+        Workflow:
+            - Loads or creates a JSON log for the specified SSID.
+            - Appends the vulnerability results with a timestamp to the JSON data.
+            - Updates the corresponding HTML log to include the new data.
+        """
+
         json_file = os.path.join(self.json_dir, f"{ssid}.json")
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
