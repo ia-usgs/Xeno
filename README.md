@@ -46,7 +46,7 @@ For love and support: [Buy Me a Coffee](https://buymeacoffee.com/xenowificompani
 ---
 
 ## **Parts List**
-  - Raspberry Pi (Recommended: Raspberry Pi 5, 4, 3B+)
+  - Raspberry Pi (Recommended: Raspberry Pi 5, 4, 3B+, 0W)
   - MicroSD Card (Minimum: 16GB)
   - Wi-Fi Adapter (Optional but Recommended)
   - Power Supply or Battery bank for portable (5V, 3A Recommended)
