@@ -63,6 +63,8 @@ For love and support: [Buy Me a Coffee](https://buymeacoffee.com/xenowificompani
 
 Be sure to use the non desktop 64 bit version!!!!
 
+You can only select ONE driver to use, either LCD Display or E-Ink display! If you use both, the second one selected won't work.
+
 1. Clone the repository and run the installation script:
    ```bash
    git clone https://github.com/ia-usgs/Xeno.git
