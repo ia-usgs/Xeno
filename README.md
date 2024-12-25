@@ -9,6 +9,8 @@ The purpose of this tool is to teach you what weaknesses there are within your o
 
 Join the Reddit community: [Reddit link](https://www.reddit.com/r/xenowificompanion/s/Yu8tJWnRLq)
 
+Follow on YouTube: [YouTube Link](https://www.youtube.com/@xenowificompanion)
+
 For love and support: [Buy Me a Coffee](https://buymeacoffee.com/xenowificompanion)
 
 ---
