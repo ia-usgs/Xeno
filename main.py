@@ -1,6 +1,8 @@
 import os
 import time
 import logging
+# Suppress debug logs from Pillow (PIL)
+logging.getLogger("PIL").setLevel(logging.WARNING)
 from wifi.wifi_manager import WiFiManager
 from utils.logger import Logger
 from scans.nmap_scanner import run_nmap_scan
@@ -267,6 +269,8 @@ def run_scans(logger, wifi_manager, html_logger, display, state_manager):
 
         # Recon Phase
         recon = Recon(logger=logger)
+        parsed_devices = []  # List to store structured device data
+
         for ip in scan_result["discovered_ips"]:
             update_display_state(
                 display,
@@ -280,16 +284,36 @@ def run_scans(logger, wifi_manager, html_logger, display, state_manager):
 
             # Detect OS during reconnaissance
             os_detected = recon.detect_os(ip)
-            if os_detected is None:
-                logger.log(f"[ERROR] OS detection returned None for IP {ip}. Defaulting to 'unknown'.")
-                os_type = "unknown"
-            elif "Windows" in os_detected:
-                os_type = "windows"
-            elif "Linux" in os_detected:
-                os_type = "linux"
+            if "timed out" in scan_result.get("raw_output", "") or os_detected is None:
+                logger.log(f"[ERROR] OS detection returned None for IP {ip}. Defaulting to 'Unknown'.")
+                os_type = "Timeout"
             else:
-                os_type = "unknown"
+                os_type = os_detected
 
+            # Parse devices from raw Nmap result
+            for line in scan_result["raw_output"].split("\n"):
+                if f"Nmap scan report for {ip}" in line:
+                    # Extract MAC address, vendor, and IP
+                    mac_address = "Unknown"
+                    vendor = "Unknown"
+                    next_lines = scan_result["raw_output"].split("\n")
+                    for next_line in next_lines:
+                        if "MAC Address" in next_line:
+                            mac_address = next_line.split(" ")[2].strip()
+                            vendor = " ".join(next_line.split(" ")[3:]).strip("()")
+                            break
+
+                    # Append structured data
+                    parsed_devices.append({
+                        "ip": ip,
+                        "mac": mac_address,
+                        "vendor": vendor,
+                        "os_version": os_type
+                    })
+
+        # Save parsed devices to the JSON file
+        scan_result["devices"] = parsed_devices
+        html_logger.save_scan_result_to_json(ssid, scan_result)
 
         # Vulnerability Scan Phase
         vuln_scanner = VulnerabilityScanner(logger=logger)
