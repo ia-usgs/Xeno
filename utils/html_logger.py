@@ -5,55 +5,23 @@ from datetime import datetime
 
 class HTMLLogger:
     def __init__(self, output_dir="utils/html_logs", json_dir="utils/json_logs"):
-        """
-        Initialize the HTMLLogger class.
-
-        Parameters:
-            output_dir (str, optional): The directory where HTML logs will be saved.
-                                        Defaults to "utils/html_logs".
-            json_dir (str, optional): The directory where JSON logs will be saved.
-                                      Defaults to "utils/json_logs".
-
-        Workflow:
-            - Creates the specified directories for HTML and JSON logs if they do not already exist.
-        """
-
+        os.makedirs(output_dir, exist_ok=True)
+        os.makedirs(json_dir, exist_ok=True)
         self.output_dir = output_dir
         self.json_dir = json_dir
-        os.makedirs(self.output_dir, exist_ok=True)
-        os.makedirs(self.json_dir, exist_ok=True)
 
     def save_scan_result_to_json(self, ssid, scan_result):
-        """
-        Save scan results to a JSON file.
-
-        Parameters:
-            ssid (str): The SSID of the Wi-Fi network associated with the scan results.
-            scan_result (str): The raw output or processed result of the scan.
-
-        Workflow:
-            - Loads existing data from the corresponding JSON file, if it exists.
-            - Appends the new scan result with a timestamp to the JSON data.
-            - Saves the updated JSON data back to the file.
-
-        Returns:
-            str: The path to the JSON file where the scan results were saved.
-        """
-
         json_file = os.path.join(self.json_dir, f"{ssid}.json")
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-        # Load existing data if the file exists
         if os.path.exists(json_file):
             with open(json_file, "r") as file:
                 data = json.load(file)
         else:
             data = {"ssid": ssid, "scans": []}
 
-        # Append the new scan result
         data["scans"].append({"timestamp": timestamp, "result": scan_result})
 
-        # Save the updated data back to the JSON file
         with open(json_file, "w") as file:
             json.dump(data, file, indent=4)
 
@@ -61,21 +29,6 @@ class HTMLLogger:
         return json_file
 
     def generate_html_from_json(self, ssid):
-        """
-        Generate or update an HTML log based on a JSON file.
-
-        Parameters:
-            ssid (str): The SSID of the Wi-Fi network associated with the scan results.
-
-        Workflow:
-            - Reads scan results from the corresponding JSON file.
-            - Generates an HTML file with the scan results formatted as entries.
-            - Saves or updates the HTML file in the specified output directory.
-
-        Raises:
-            Warning: If the JSON file for the specified SSID does not exist.
-        """
-
         json_file = os.path.join(self.json_dir, f"{ssid}.json")
         html_file = os.path.join(self.output_dir, f"{ssid}.html")
 
@@ -83,11 +36,9 @@ class HTMLLogger:
             print(f"[WARNING] No JSON file found for SSID: {ssid}. Cannot generate HTML log.")
             return
 
-        # Load scan data from JSON
         with open(json_file, "r") as file:
             data = json.load(file)
 
-        # Generate HTML content
         html_content = f"""
         <!DOCTYPE html>
         <html>
@@ -96,8 +47,10 @@ class HTMLLogger:
             <style>
                 body {{ font-family: Arial, sans-serif; margin: 20px; }}
                 .scan-entry {{ margin-bottom: 20px; padding: 10px; border: 1px solid #ddd; border-radius: 5px; background-color: #f9f9f9; }}
-                .scan-entry h2 {{ margin: 0; font-size: 1.2em; color: #333; }}
-                .scan-entry pre {{ background-color: #eee; padding: 10px; border-radius: 3px; overflow-x: auto; }}
+                .scan-summary {{ margin-bottom: 20px; background-color: #eaf7ff; border: 1px solid #ddd; border-radius: 5px; padding: 10px; }}
+                table {{ width: 100%; border-collapse: collapse; }}
+                th, td {{ text-align: left; padding: 8px; border: 1px solid #ddd; }}
+                th {{ background-color: #f2f2f2; }}
             </style>
         </head>
         <body>
@@ -106,103 +59,187 @@ class HTMLLogger:
 
         for scan in data["scans"]:
             html_content += f"""
-            <div class="scan-entry">
-                <h2>Scan conducted at: {scan['timestamp']}</h2>
-                <pre>{scan.get('result', 'None')}</pre>
-            </div>
+            <div class="scan-summary">
+                <h2>Scan Summary</h2>
+                <p><b>Scan Conducted At:</b> {scan['timestamp']}</p>
             """
+            if "result" in scan:
+                html_content += """
+                <h3>Discovered Devices</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>IP Address</th>
+                            <th>MAC Address</th>
+                            <th>Vendor</th>
+                            
+                        </tr>
+                    </thead>
+                    <tbody>
+                """
+                # Properly call _parse_nmap_result to parse discovered devices
+                discovered_devices = self._parse_nmap_result(scan["result"])
+                for device in discovered_devices:
+                    html_content += f"""
+                    <tr>
+                        <td>{device.get('ip', 'Unknown')}</td>
+                        <td>{device.get('mac', 'Unknown')}</td>
+                        <td>{device.get('vendor', 'Unknown')}</td>
+                        
+                    </tr>
+                    """
+                html_content += "</tbody></table>"
+
             if "vulnerability_results" in scan:
                 html_content += """
-                <div class="scan-entry">
-                    <h2>Vulnerability Scan conducted at: {}</h2>
-                    <pre>{}</pre>
-                </div>
-                """.format(
-                    scan["timestamp"],
-                    json.dumps(scan["vulnerability_results"], indent=4)
-                )
+                <h3>Vulnerability Details</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Target</th>
+                            <th>Port</th>
+                            <th>Service</th>
+                            <th>Version</th>
+                            <th>Exploit Title</th>
+                            <th>Path</th>
+                            
+                        </tr>
+                    </thead>
+                    <tbody>
+                """
+                for vuln in scan["vulnerability_results"].get("vulnerabilities", []):
+                    html_content += f"""
+                    <tr>
+                        <td>{scan['vulnerability_results'].get('target', 'Unknown')}</td>
+                        <td>{vuln.get('port', 'Unknown')}</td>
+                        <td>{vuln.get('name', 'Unknown')}</td>
+                        <td>{vuln.get('version', 'Unknown')}</td>
+                        <td>{self._parse_exploit_titles(vuln.get('vulnerabilities', 'No Exploits'))}</td>
+                        <td>{self._parse_exploit_paths(vuln.get('vulnerabilities', 'No Paths'))}</td>
+                        
+                    </tr>
+                    """
+                html_content += "</tbody></table>"
+
+            html_content += "</div>"
 
         html_content += """
         </body>
         </html>
         """
 
-        # Save the HTML content to the file
         with open(html_file, "w") as file:
             file.write(html_content)
 
         print(f"[INFO] HTML log updated: {html_file}")
 
-    def append_recon_results_to_html(self, ssid, recon_results):
+
+    def _parse_nmap_result(self, result):
         """
-        Append reconnaissance results to the existing HTML log.
+        Helper function to parse Nmap result data and extract discovered devices.
 
         Parameters:
-            ssid (str): The SSID of the Wi-Fi network associated with the reconnaissance results.
-            recon_results (dict): A dictionary containing the reconnaissance data to append.
+            result (str | dict): The raw Nmap scan result or a dictionary containing raw_output.
 
-        Workflow:
-            - Loads or creates a JSON log for the specified SSID.
-            - Appends the reconnaissance results with a timestamp to the JSON data.
-            - Updates the corresponding HTML log to include the new data.
+        Returns:
+            list: A list of dictionaries, each containing device details (IP, MAC, Vendor, OS Version).
         """
+        devices = []
+        device_map = {}  # Use a map to avoid duplicates and consolidate data
 
-        json_file = os.path.join(self.json_dir, f"{ssid}.json")
-        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-
-        # Load or create JSON log
-        if os.path.exists(json_file):
-            with open(json_file, "r") as file:
-                data = json.load(file)
+        # Check if result is a string or dictionary
+        if isinstance(result, str):
+            lines = result.split("\n")  # Directly split string
+        elif isinstance(result, dict):
+            raw_output = result.get("raw_output", "")
+            if isinstance(raw_output, str):
+                lines = raw_output.split("\n")  # Split raw_output if it's a string
+            else:
+                lines = []  # Fallback to empty if raw_output is not a string
         else:
-            data = {"ssid": ssid, "scans": []}
+            lines = []  # Fallback to empty if result is neither string nor dict
 
-        # Add recon results
-        data["scans"].append({
-            "timestamp": timestamp,
-            "recon_results": recon_results
-        })
+        current_ip = None
+        current_mac = None
+        vendor = "Unknown"
+        os_version = "Unknown"
 
-        # Save updated JSON
-        with open(json_file, "w") as file:
-            json.dump(data, file, indent=4)
+        for line in lines:
+            if line.startswith("Nmap scan report for"):
+                # Extract IP or hostname
+                current_ip = line.split("for")[1].strip()
+                if "(" in current_ip and ")" in current_ip:
+                    current_ip = current_ip.split("(")[-1].strip(")")
+            elif "MAC Address" in line:
+                # Extract MAC address and vendor
+                parts = line.split("MAC Address: ")
+                if len(parts) > 1:
+                    mac_info = parts[1].split(" ", 1)
+                    current_mac = mac_info[0]
+                    vendor = mac_info[1].strip("()") if len(mac_info) > 1 else "Unknown"
+            elif "OS details" in line:
+                # Extract detailed OS information
+                os_version = line.split("OS details:")[1].strip()
+            elif "Running:" in line:
+                # Extract running OS
+                os_version = line.split("Running:")[1].strip()
 
-        # Generate updated HTML
-        self.generate_html_from_json(ssid)
+            # Append or update device details when IP is found
+            if current_ip:
+                if current_ip not in device_map:
+                    device_map[current_ip] = {
+                        "ip": current_ip,
+                        "mac": current_mac or "Unknown",
+                        "vendor": vendor or "Unknown",
+                        "os_version": os_version or "Unknown",
+                    }
+                else:
+                    # Update only if new data is more specific
+                    if current_mac and device_map[current_ip]["mac"] == "Unknown":
+                        device_map[current_ip]["mac"] = current_mac
+                    if vendor and device_map[current_ip]["vendor"] == "Unknown":
+                        device_map[current_ip]["vendor"] = vendor
+                    if os_version and device_map[current_ip]["os_version"] == "Unknown":
+                        device_map[current_ip]["os_version"] = os_version
+
+                # Reset for next device
+                current_ip, current_mac, vendor, os_version = None, None, "Unknown", "Unknown"
+
+        # Convert map to list
+        devices = list(device_map.values())
+        return devices
+
+    def _parse_exploit_titles(self, vulnerabilities):
+        if "Exploit Title" in vulnerabilities:
+            lines = vulnerabilities.split("\n")
+            titles = [line.split("|")[0].strip() for line in lines if "|" in line]
+            return "<br>".join(titles)
+        return "No Exploits"
+
+    def _parse_exploit_paths(self, vulnerabilities):
+        if "|" in vulnerabilities:
+            lines = vulnerabilities.split("\n")
+            paths = [line.split("|")[1].strip() for line in lines if "|" in line]
+            return "<br>".join(paths)
+        return "No Paths"
 
     def append_vulnerability_results_to_html(self, ssid, vulnerability_results):
-        """
-        Append vulnerability scan results to the existing HTML log.
-
-        Parameters:
-            ssid (str): The SSID of the Wi-Fi network associated with the vulnerability results.
-            vulnerability_results (dict): A dictionary containing the vulnerability data to append.
-
-        Workflow:
-            - Loads or creates a JSON log for the specified SSID.
-            - Appends the vulnerability results with a timestamp to the JSON data.
-            - Updates the corresponding HTML log to include the new data.
-        """
-
         json_file = os.path.join(self.json_dir, f"{ssid}.json")
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-        # Load or create JSON log
         if os.path.exists(json_file):
             with open(json_file, "r") as file:
                 data = json.load(file)
         else:
             data = {"ssid": ssid, "scans": []}
 
-        # Add vulnerability scan results
         data["scans"].append({
             "timestamp": timestamp,
             "vulnerability_results": vulnerability_results
         })
 
-        # Save updated JSON
         with open(json_file, "w") as file:
             json.dump(data, file, indent=4)
 
-        # Generate updated HTML
         self.generate_html_from_json(ssid)
+        print(f"[INFO] Vulnerability results appended and HTML updated for SSID: {ssid}")
