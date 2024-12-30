@@ -18,7 +18,7 @@ For love and support: [Buy Me a Coffee](https://buymeacoffee.com/xenowificompani
 ## **Features**
 
 - **Wi-Fi Scanning and Connection Management**
-  - Automatically connects to Wi-Fi networks based on provided credentials (`config/wifi_credentials.json`).
+  - Automatically connects to Wi-Fi networks based on provided credentials (`/home/pi/xeno/config/wifi_credentials.json`).
   - Scans nearby networks and retries connections if necessary.
   - Supports automatic MAC address randomization.
 
