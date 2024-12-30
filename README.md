@@ -106,7 +106,7 @@ sudo pip3 install -r requirements.txt --break-system-packages
 
 #### **3. Set Up Configuration Files**
 
-- **Wi-Fi Credentials**: Create a file at `config/wifi_credentials.json` with the following structure:
+- **Wi-Fi Credentials**: Create a file at `/home/pi/xeno/config/wifi_credentials.json` with the following structure:
   ```json
   [
       {"SSID": "NetworkName", "Password": "NetworkPassword"},
@@ -114,13 +114,13 @@ sudo pip3 install -r requirements.txt --break-system-packages
   ]
   ```
 
-- **SSH Credentials**: Create a file at `config/ssh_default_credentials.txt` with the following format:
+- **SSH Credentials**: Create a file at `/home/pi/xeno/config/ssh_default_credentials.txt` with the following format:
   ```plaintext
   username:password
   anotheruser:anotherpassword
   ```
 
-- **Password List**: Add any custom password lists for brute-force attempts in `config/password_list.txt`.
+- **Password List**: Add any custom password lists for brute-force attempts in `/home/pi/xeno/config/password_list.txt`.
 
 #### **4. Configure e-Paper Display (Optional)**
 
