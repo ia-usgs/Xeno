@@ -61,7 +61,7 @@ For love and support: [Buy Me a Coffee](https://buymeacoffee.com/xenowificompani
 
 ### **Automatic Installation (Recommended)**
 
-Be sure to use the non desktop 64 bit version!!!!
+Be sure to use the Raspberry Pi OS lite 64 bit version!!!! (Unless RPi0)
 
 You can only select ONE driver to use, either LCD Display or E-Ink display! If you use both, the second one selected won't work.
 
