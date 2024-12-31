@@ -256,6 +256,8 @@ To run the script continuously on system startup:
 - If you get `GPIO Busy` while running manually in CLI it is because the service is running.
 - Run `sudo systemctl stop xeno.service` the from `/xeno` directory run `sudo python main.py`
 - Check logs at `xeno/logs/scan.log`
+- If Xeno is not getting anything via scans, it could be that it is taking longer than 60 seconds.
+- To increase timeout go to `/xeno/attacks/recon.py` and modify line 42 `def scan_ports(self, target, timeout=60):` and change from 60 seconds to desired amount.
 
 ### Contributions
 
