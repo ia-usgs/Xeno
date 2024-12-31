@@ -232,6 +232,7 @@ if [ "$WIFI_STATUS" = "disabled" ]; then
         echo -e "${GREEN}WiFi module has been successfully enabled.${RESET}"
     else
         echo -e "${RED}[ERROR] Failed to enable WiFi module. Please check manually.${RESET}"
+        exit 1
     fi
 else
     echo -e "${GREEN}WiFi module is already enabled.${RESET}"
