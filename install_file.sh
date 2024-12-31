@@ -221,110 +221,44 @@ EOF
 echo -e "${GREEN}Enabling Xeno service but not starting it yet.${RESET}"
 sudo systemctl enable xeno.service
 
-# Step 7: Redirect Console and Set Up Framebuffer
-echo -e "${GREEN}[7/7] Installing and configuring LCD driver...${RESET}"
+# Install e-Paper Display Drivers
+echo -e "${GREEN}Installing and configuring e-Paper display drivers...${RESET}"
 
-# Prompt for LCD Installation
-echo -e "${GREEN}Do you want to install and configure the LCD screen? (y/n)${RESET}"
-read -r install_lcd
+# Enable SPI Interface
+sudo raspi-config nonint do_spi 0
 
-if [[ "$install_lcd" =~ ^[Yy]$ ]]; then
-    # Update /boot/cmdline.txt to redirect console output
-    sudo sed -i 's/$/ fbcon=map:0/' /boot/cmdline.txt
-
-    # Ensure framebuffer device is set for SDL applications
-    if ! grep -q "SDL_FBDEV" ~/.bashrc; then
-        echo -e "${GREEN}Adding SDL framebuffer environment variables to .bashrc...${RESET}"
-        echo "export SDL_FBDEV=/dev/fb1" >> ~/.bashrc
-        echo "export SDL_VIDEODRIVER=fbcon" >> ~/.bashrc
-    fi
-
-    # Install and Configure LCD Driver
-    LCD_DRIVER_DIR="/home/pi/LCD-show"
-    LCD_DRIVER_REPO="https://github.com/goodtft/LCD-show.git"
-
-    # Check if the LCD driver installation script was already run
-    if [ -f "/usr/local/bin/fbcp" ] && grep -q "fbcon=map:0" /boot/cmdline.txt; then
-        echo -e "${GREEN}LCD driver is already installed. Skipping installation...${RESET}"
-    else
-        # Check if the LCD driver directory exists
-        if [ ! -d "$LCD_DRIVER_DIR" ]; then
-            echo -e "${GREEN}Cloning the LCD driver repository...${RESET}"
-            git clone "$LCD_DRIVER_REPO" "$LCD_DRIVER_DIR"
-        fi
-
-        # Change to the LCD driver directory
-        cd "$LCD_DRIVER_DIR"
-
-        # Make the driver script executable
-        sudo chmod +x LCD35-show
-
-        # Run the installation script with non-interactive mode
-        echo -e "${GREEN}Running the LCD driver installation script...${RESET}"
-        yes | sudo ./LCD35-show
-
-        # Install fbcp for framebuffer mirroring
-        echo -e "${GREEN}Installing fbcp for framebuffer mirroring...${RESET}"
-        sudo apt-get install -y cmake
-        if [ ! -f /usr/local/bin/fbcp ]; then
-            git clone https://github.com/tasanakorn/rpi-fbcp.git /home/pi/rpi-fbcp
-            cd /home/pi/rpi-fbcp
-            mkdir build && cd build
-            cmake .. && make
-            sudo install fbcp /usr/local/bin/
-        fi
-    fi
-
-    # Final Message and Reboot
-    echo -e "${GREEN}LCD driver installation check complete. The system will now reboot to apply changes.${RESET}"
-    sudo reboot
-else
-    echo -e "${GREEN}Skipping LCD installation. Proceeding with other setup steps.${RESET}"
+# Check /boot/config.txt for SPI enablement
+if ! grep -q "dtparam=spi=on" /boot/config.txt; then
+    echo -e "${GREEN}Enabling SPI in /boot/config.txt...${RESET}"
+    echo "dtparam=spi=on" | sudo tee -a /boot/config.txt
 fi
 
-# Step 8: Install e-Paper Display Drivers
-echo -e "${GREEN}[8/8] Do you want to install and configure the e-Paper display drivers? (y/n)${RESET}"
-read -r install_epaper
+# Install lg library
+echo -e "${GREEN}Installing lg library...${RESET}"
+wget https://github.com/joan2937/lg/archive/master.zip
+unzip master.zip
+cd lg-master
+make
+sudo make install
 
-if [[ "$install_epaper" =~ ^[Yy]$ ]]; then
-    echo -e "${GREEN}Installing and configuring e-Paper display drivers...${RESET}"
+# Install gpiod library (optional)
+echo -e "${GREEN}Installing gpiod library...${RESET}"
+sudo apt-get update
+sudo apt-get install -y gpiod libgpiod-dev
 
-    # Enable SPI Interface
-    sudo raspi-config nonint do_spi 0
+# Install BCM2835 library
+echo -e "${GREEN}Installing BCM2835 library...${RESET}"
+wget http://www.airspayce.com/mikem/bcm2835/bcm2835-1.71.tar.gz
+tar zxvf bcm2835-1.71.tar.gz
+cd bcm2835-1.71/
+sudo ./configure && sudo make && sudo make check && sudo make install
 
-    # Check /boot/config.txt for SPI enablement
-    if ! grep -q "dtparam=spi=on" /boot/config.txt; then
-        echo -e "${GREEN}Enabling SPI in /boot/config.txt...${RESET}"
-        echo "dtparam=spi=on" | sudo tee -a /boot/config.txt
-    fi
+# Install WiringPi
+echo -e "${GREEN}Installing WiringPi...${RESET}"
+git clone https://github.com/WiringPi/WiringPi
+cd WiringPi
+./build
+gpio -v
 
-    # Install lg library
-    echo -e "${GREEN}Installing lg library...${RESET}"
-    wget https://github.com/joan2937/lg/archive/master.zip
-    unzip master.zip
-    cd lg-master
-    make
-    sudo make install
-
-    # Install gpiod library (optional)
-    echo -e "${GREEN}Installing gpiod library...${RESET}"
-    sudo apt-get update
-    sudo apt-get install -y gpiod libgpiod-dev
-
-    # Install BCM2835 library
-    echo -e "${GREEN}Installing BCM2835 library...${RESET}"
-    wget http://www.airspayce.com/mikem/bcm2835/bcm2835-1.71.tar.gz
-    tar zxvf bcm2835-1.71.tar.gz
-    cd bcm2835-1.71/
-    sudo ./configure && sudo make && sudo make check && sudo make install
-
-    # Install WiringPi
-    echo -e "${GREEN}Installing WiringPi...${RESET}"
-    git clone https://github.com/WiringPi/WiringPi
-    cd WiringPi
-    ./build
-    gpio -v
-else
-    echo -e "${GREEN}Skipping e-Paper installation. Proceeding with other setup steps.${RESET}"
-fi
+echo -e "${GREEN}e-Paper display driver installation complete!${RESET}"
 
