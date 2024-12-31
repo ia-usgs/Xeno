@@ -39,11 +39,10 @@ For love and support: [Buy Me a Coffee](https://buymeacoffee.com/xenowificompani
   - Dynamically targets OS-specific directories and file types.
 
 - **HTML and JSON Logging**
-  - Logs scan and attack results in both JSON (`utils/json_logs`) and HTML (`utils/html_logs`) formats for detailed review.
+  - Logs scan and attack results in both JSON (`/home/pi/xeno/utils/json_logs`) and HTML (`/home/pi/xeno/utils/html_logs`) formats for detailed review.
 
-- **Dynamic E-Paper Display Updates or LCD screen to see CLI updates**
-  - Displays workflow progress and stats on an e-paper display using custom images (`images/`).
-  - On LCD display, see output in more detail than a cute lil' Xeno.
+- **Dynamic E-Paper Display Updates**
+  - Displays workflow progress and stats on an e-paper display using custom images (`/home/pi/xeno/images`).
 
 ---
 
@@ -52,8 +51,7 @@ For love and support: [Buy Me a Coffee](https://buymeacoffee.com/xenowificompani
   - MicroSD Card (Minimum: 16GB)
   - Wi-Fi Adapter (Optional but Recommended)
   - Power Supply or Battery bank for portable (5V, 3A Recommended)
-  - 3.5-inch LCD Touchscreen (Optional)
-  - waveshare 2.13inch E-Ink Display HAT V4 (Optional)
+  - waveshare 2.13inch E-Ink Display HAT V4
 
 ---
 
@@ -62,8 +60,6 @@ For love and support: [Buy Me a Coffee](https://buymeacoffee.com/xenowificompani
 ### **Automatic Installation (Recommended)**
 
 Be sure to use the Raspberry Pi OS lite 64 bit version!!!! (Unless RPi0)
-
-You can only select ONE driver to use, either LCD Display or E-Ink display! If you use both, the second one selected won't work.
 
 1. Clone the repository and run the installation script:
    ```bash
@@ -78,7 +74,7 @@ You can only select ONE driver to use, either LCD Display or E-Ink display! If y
    - Clone required repositories (e.g., ExploitDB).
    - Configure services and environment variables for the Xeno project.
    - Set up logging directories (`logs/`, `utils/json_logs`, `utils/html_logs`).
-   - Optionally set up a 3.5-inch LCD or e-paper display.
+   - Set up the e-paper display.
    - It will install theharvester and shodan, it is for a future update.
 
 3. Follow any on-screen prompts during the installation process.
@@ -122,22 +118,11 @@ sudo pip3 install -r requirements.txt --break-system-packages
 
 - **Password List**: Add any custom password lists for brute-force attempts in `/home/pi/xeno/config/password_list.txt`.
 
-#### **4. Configure e-Paper Display (Optional)**
+#### **4. Configure e-Paper Display**
 
-If using an e-paper display, ensure SPI is enabled:
+Ensure SPI is enabled:
 ```bash
 sudo raspi-config nonint do_spi 0
-```
----
-#### **4.1 Configure LCD display (Optional)**
-
-If using LCD display:
-```
-sudo rm -rf LCD-show 
-git clone https://github.com/goodtft/LCD-show.git 
-chmod -R 755 LCD-show 
-cd LCD-show/
-sudo ./LCD35-show 
 ```
 ---
 
@@ -197,9 +182,9 @@ To run the script continuously on system startup:
   ```
 
 - **Log directories:**
-  - **Scan Logs**: `logs/scan.log`
-  - **JSON Logs**: `utils/json_logs/`
-  - **HTML Logs**: `utils/html_logs/`
+  - **Scan Logs**: `/home/pi/xeno/logs/scan.log`
+  - **JSON Logs**: `/home/pi/xeno/utils/json_logs/`
+  - **HTML Logs**: `/home/pi/xeno/utils/html_logs/`
 
 ---
 
@@ -240,9 +225,9 @@ To run the script continuously on system startup:
 ## **Step-by-Step Workflow**
 
 ### **1. Prepare Configuration Files**
-- Add Wi-Fi networks in `config/wifi_credentials.json`.
-- Set default SSH credentials in `config/ssh_default_credentials.txt`.
-- Include a password list in `config/password_list.txt`.
+- Add Wi-Fi networks in `/home/pi/xeno/config/wifi_credentials.json`.
+- Set default SSH credentials in `/home/pi/xeno/config/ssh_default_credentials.txt`.
+- Include a password list in `/home/pi/xeno/config/password_list.txt`.
 
 ### **2. Run the Script**
 - **Manually**:
@@ -258,11 +243,11 @@ To run the script continuously on system startup:
   sudo journalctl -u xeno.service -f
   ```
 - Review reports in:
-  - `utils/json_logs/`
-  - `utils/html_logs/`
+  - `/home/pi/xeno/utils/json_logs/`
+  - `/home/pi/xeno/utils/html_logs/`
 
 ### **4. Customize**
-- Add new attack modules in the `attacks/` directory.
+- Add new attack modules in the `/home/pi/xeno/attacks` directory.
 - Modify workflows in `main.py`.
 
 ---
