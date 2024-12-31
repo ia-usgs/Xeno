@@ -221,6 +221,22 @@ EOF
 echo -e "${GREEN}Enabling Xeno service but not starting it yet.${RESET}"
 sudo systemctl enable xeno.service
 
+# Check if WiFi module is enabled and enable it if it's not
+echo -e "${GREEN}[Checking WiFi Module Status]${RESET}"
+WIFI_STATUS=$(nmcli radio wifi)
+
+if [ "$WIFI_STATUS" = "disabled" ]; then
+    echo -e "${YELLOW}WiFi module is disabled. Enabling WiFi module...${RESET}"
+    nmcli radio wifi on
+    if [ $? -eq 0 ]; then
+        echo -e "${GREEN}WiFi module has been successfully enabled.${RESET}"
+    else
+        echo -e "${RED}[ERROR] Failed to enable WiFi module. Please check manually.${RESET}"
+    fi
+else
+    echo -e "${GREEN}WiFi module is already enabled.${RESET}"
+fi
+
 # Install e-Paper Display Drivers
 echo -e "${GREEN}Installing and configuring e-Paper display drivers...${RESET}"
 
