@@ -252,6 +252,10 @@ To run the script continuously on system startup:
 
 ---
 
+## **Debugging**
+- If you get `GPIO Busy` while running manually in CLI it is because the service is running. Run `sudo systemctl stop xeno.service` the from /xeno run `sudo python main.py`
+- Check logs at `xeno/logs/scan.log`
+
 ### Contributions
 
 This project is open for contributions! Feel free to fork the repository and submit pull requests. Contact me on Reddit for discussions and suggestions.
