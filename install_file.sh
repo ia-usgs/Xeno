@@ -227,7 +227,7 @@ WIFI_STATUS=$(nmcli radio wifi)
 
 if [ "$WIFI_STATUS" = "disabled" ]; then
     echo -e "${YELLOW}WiFi module is disabled. Enabling WiFi module...${RESET}"
-    nmcli radio wifi on
+    sudo nmcli radio wifi on
     if [ $? -eq 0 ]; then
         echo -e "${GREEN}WiFi module has been successfully enabled.${RESET}"
     else
