@@ -238,6 +238,12 @@ else
     echo -e "${GREEN}WiFi module is already enabled.${RESET}"
 fi
 
+# Check and remove the unwanted /Xeno directory
+if [ -d "/home/pi/Xeno" ]; then
+    echo -e "${RED}Directory /home/pi/Xeno exists but is not needed. Deleting it...${RESET}"
+    sudo rm -rf "/home/pi/Xeno"
+fi
+
 # Install e-Paper Display Drivers
 echo -e "${GREEN}Installing and configuring e-Paper display drivers...${RESET}"
 
