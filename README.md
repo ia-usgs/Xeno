@@ -95,7 +95,7 @@ cd Xeno
 Install required system and Python dependencies:
 
 ```bash
-sudo apt-get update && sudo apt-get install -y git python3 python3-pip python3-venv curl     dnsutils macchanger smbclient libjpeg-dev libpng-dev nmap fbi network-manager
+sudo apt-get update && sudo apt-get install -y git python3 python3-pip python3-venv curl dnsutils macchanger smbclient libjpeg-dev libpng-dev nmap fbi network-manager
 
 sudo pip3 install -r requirements.txt --break-system-packages
 ```
