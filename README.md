@@ -83,6 +83,11 @@ Be sure to use the Raspberry Pi OS lite 64 bit version!!!! (Unless RPi0)
 
 ### **Manual Installation**
 
+Be sure to have your settings set this way:
+
+![image](https://github.com/user-attachments/assets/20de68d8-5bea-4e16-85ad-9a4449127d37)
+
+
 #### **1. Clone the Repository**
 
 ```bash
