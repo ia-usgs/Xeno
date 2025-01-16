@@ -11,7 +11,6 @@ from attacks.recon import Recon
 from attacks.vulnerability_scan import VulnerabilityScanner
 from attacks.exploit_tester import ExploitTester
 from attacks.file_stealer import FileStealer
-from utils.display import EPaperDisplay
 from utils.image_state_manager import ImageStateManager
 import subprocess
 
