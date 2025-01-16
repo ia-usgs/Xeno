@@ -39,6 +39,7 @@ class EPaperDisplay:
         self.age = 0  # Age in days
         self.level = 1
         self.start_date = None
+        self.pet_name = "Xeno"  # Default name if not set in state
         self.load_state()  # Load saved state
         logging.info("EPaperDisplay initialized.")
 
@@ -62,6 +63,7 @@ class EPaperDisplay:
                     state = json.load(f)
                     self.level = state.get("level", 1)
                     self.start_date = state.get("start_date", None)
+                    self.pet_name = state.get("pet_name", "Xeno")
 
                     # Calculate age based on start_date
                     if self.start_date:
@@ -94,6 +96,7 @@ class EPaperDisplay:
             state = {
                 "level": self.level,
                 "start_date": self.start_date,
+                "pet_name": self.pet_name
             }
             with open(STATE_FILE, "w") as f:
                 json.dump(state, f)
@@ -246,18 +249,22 @@ class EPaperDisplay:
                 # Stats Section
                 font_stats = ImageFont.truetype('/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf', 8)
                 draw.text(xy=(5, 25), text=f"Targets: {stats['targets']}", font=font_stats, fill=0)
-                draw.text(xy=(60, 25), text=f"Vulns: {stats['vulns']}", font=font_stats, fill=0)
+                draw.text(xy=(75, 25), text=f"Vulns: {stats['vulns']}", font=font_stats, fill=0)
                 draw.text(xy=(5, 35), text=f"Exploits: {stats['exploits']}", font=font_stats, fill=0)
-                draw.text(xy=(60, 35), text=f"Files: {stats['files']}", font=font_stats, fill=0)
+                draw.text(xy=(75, 35), text=f"Files: {stats['files']}", font=font_stats, fill=0)
 
                 # Current status INSIDE the blank box
                 font_body = ImageFont.truetype('/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf', 8)
-                draw.text(xy=(5, 50), text="Status:", font=font_body, fill=0)
+                draw.text(xy=(40, 50), text="Status:", font=font_body, fill=0)
                 draw.text(xy=(5, 65), text=current_status, font=font_body, fill=0)
 
+                # Pet Name Section
+                font_body = ImageFont.truetype('/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf', 8)
+                draw.text(xy=(35, 100), text=f"{self.pet_name}", font=font_body, fill=0)
+
                 # Age and Level
-                draw.text(xy=(5, 100), text=f"Age: {self.age} days", font=font_body, fill=0)
-                draw.text(xy=(60, 100), text=f"Level: {self.level}", font=font_body, fill=0)
+                draw.text(xy=(5, 110), text=f"Age: {self.age} days", font=font_body, fill=0)
+                draw.text(xy=(75, 110), text=f"Level: {self.level}", font=font_body, fill=0)
 
                 # Bottom Section: Xeno Image
                 canvas.paste(image, (17, 150))  # Paste the dynamic Xeno image
