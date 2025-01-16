@@ -263,7 +263,7 @@ def run_scans(logger, wifi_manager, html_logger, display, state_manager):
             stats=stats,
             use_partial_update=True
         )
-        scan_result = run_nmap_scan("192.168.1.0/24", logger=logger)
+        scan_result = run_nmap_scan("192.168.1.0/24", logger=logger) #change the ip for different range tests
         stats["targets"] += len(scan_result["discovered_ips"])  # Increment Targets
         html_logger.save_scan_result_to_json(ssid, scan_result["raw_output"])
 
