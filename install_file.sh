@@ -285,3 +285,38 @@ gpio -v
 
 echo -e "${GREEN}e-Paper display driver installation complete!${RESET}"
 
+# Prompt user for a custom pet name
+echo -e "${GREEN}Set up your custom pet name (default: Xeno): ${RESET}"
+read -p "Enter your pet name: " pet_name
+
+# If the user presses Enter without typing a name, set default
+if [ -z "$pet_name" ]; then
+    pet_name="Xeno"  # Default pet name
+fi
+
+echo -e "${GREEN}Pet name set to: $pet_name${RESET}"
+
+# Define state file path
+STATE_FILE="/home/pi/xeno/state.json"
+
+# Create or update the state.json file
+if [ ! -f "$STATE_FILE" ]; then
+    echo -e "${GREEN}Creating state.json file...${RESET}"
+    cat <<EOF > "$STATE_FILE"
+{
+    "level": 1,
+    "start_date": "$(date +%Y-%m-%d)",
+    "pet_name": "$pet_name"
+}
+EOF
+    echo -e "${GREEN}State file initialized with pet name.${RESET}"
+else
+    echo -e "${GREEN}Updating existing state.json with pet name...${RESET}"
+    if jq '.pet_name' "$STATE_FILE" &> /dev/null; then
+        jq --arg pet_name "$pet_name" '.pet_name = $pet_name' "$STATE_FILE" > "${STATE_FILE}.tmp" && mv "${STATE_FILE}.tmp" "$STATE_FILE"
+    else
+        jq --arg pet_name "$pet_name" '. + {pet_name: $pet_name}' "$STATE_FILE" > "${STATE_FILE}.tmp" && mv "${STATE_FILE}.tmp" "$STATE_FILE"
+    fi
+    echo -e "${GREEN}Pet name updated in state.json.${RESET}"
+fi
+
