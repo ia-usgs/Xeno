@@ -7,9 +7,9 @@
 A Python-based tool for scanning, auditing, and performing penetration tests on Wi-Fi networks and connected devices. This project automates network scanning, reconnaissance, and security testing using custom scripts and external tools.
 The purpose of this tool is to teach you what weaknesses there are within your own network and for you to harden that network in order to better defend and protect it.
 
-Join the Reddit community: [Reddit link](https://www.reddit.com/r/xenowificompanion/s/Yu8tJWnRLq)
+Join the Reddit community: [Reddit](https://www.reddit.com/r/xenowificompanion/s/Yu8tJWnRLq)
 
-Follow on YouTube: [YouTube Link](https://www.youtube.com/@xenowificompanion)
+Follow on YouTube: [YouTube](https://www.youtube.com/@xenowificompanion)
 
 Join on Discord: [Discord](https://discord.gg/RnSjNAPZ)
 
