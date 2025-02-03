@@ -11,6 +11,8 @@ Join the Reddit community: [Reddit link](https://www.reddit.com/r/xenowificompan
 
 Follow on YouTube: [YouTube Link](https://www.youtube.com/@xenowificompanion)
 
+Join on Discord: [Discord](https://discord.gg/RnSjNAPZ)
+
 For love and support: [Buy Me a Coffee](https://buymeacoffee.com/xenowificompanion)
 
 ---
