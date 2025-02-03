@@ -30,7 +30,7 @@ class ImageStateManager:
         "scanning": "Sniffing the network..!",
         "analyzing": "So many targets!",
         "ready_to_attack": "Xeno is sharpening its claws...",
-        "attacking": "Xeno is on the hunt! Beware!",
+        "attacking": "Xeno is on the hunt!",
         "success": "Mission accomplished!",
         "fallback": "Oops!",
         "validating": "Double-checking...",
