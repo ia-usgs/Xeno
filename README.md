@@ -82,8 +82,13 @@ Be sure to use the Raspberry Pi OS lite 64 bit version!!!! (Unless RPi0)
    sudo chmod 777 install_file.sh
    sudo ./install_file.sh
    ```
+   If you don't have git do the following:
+   ```
+    sudo apt update --fix-missing
+    sudo apt install git -y
+   ```
 
-2. The script will:
+3. The script will:
    - Install all dependencies (Python libraries, tools like `nmap`, and e-paper display drivers).
    - Clone required repositories (e.g., ExploitDB).
    - Configure services and environment variables for the Xeno project.
@@ -91,7 +96,7 @@ Be sure to use the Raspberry Pi OS lite 64 bit version!!!! (Unless RPi0)
    - Set up the e-paper display.
    - It will install theharvester and shodan, it is for a future update.
 
-3. Follow any on-screen prompts during the installation process.
+4. Follow any on-screen prompts during the installation process.
 
 ---
 
