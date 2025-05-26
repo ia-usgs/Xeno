@@ -75,7 +75,11 @@ The purpose of this tool is to teach you what weaknesses there are within your o
 
 Be sure to use the Raspberry Pi OS lite 64 bit version!!!! (Unless RPi0)
 
-1. Clone the repository and run the installation script:
+1. Be sure to have your settings set this way:
+
+![image](https://github.com/user-attachments/assets/20de68d8-5bea-4e16-85ad-9a4449127d37)
+
+2. Clone the repository and run the installation script:
    ```bash
    git clone https://github.com/ia-usgs/Xeno.git
    cd Xeno
