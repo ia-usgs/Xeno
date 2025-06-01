@@ -1,1 +1,5 @@
 __pycache__
+html_logs/
+json_logs/
+test_html_logger.py
+test_output/
