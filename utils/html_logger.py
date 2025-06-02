@@ -50,13 +50,11 @@ class HTMLLogger:
         # Prepare HTML content
         scan_entries = ""
         for scan in data["scans"]:
-            scan_entries += f"""
-            <div class="scan-summary">
-            <h2>Scan Summary</h2>
-            <p><b>Scan Conducted At:</b> {scan['timestamp']}</p>
-            """
             if "result" in scan:
-                scan_entries += """
+                scan_entries += f"""
+                <div class="scan-summary">
+                <h2>Scan Summary</h2>
+                <p><b>Scan Conducted At:</b> {scan['timestamp']}</p>
                 <h3>Discovered Devices</h3>
                 <table>
                     <thead>
@@ -83,20 +81,22 @@ class HTMLLogger:
         vulnerability_entries = ""
         for scan in data["scans"]:
             if "vulnerability_results" in scan:
-                vulnerability_entries += """
-                <h3>Vulnerability Details</h3>
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Target</th>
-                            <th>Port</th>
-                            <th>Service</th>
-                            <th>Version</th>
-                            <th>Exploit Title</th>
-                            <th>Path</th>
-                        </tr>
-                    </thead>
-                    <tbody>
+                vulnerability_entries += f"""
+                <div class="vulnerability-details">
+                    <h3 style="color:red;">Vulnerability Details</h3>
+                    <p><b>Scan Conducted At:</b> {scan['timestamp']}</p>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Target</th>
+                                <th>Port</th>
+                                <th>Service</th>
+                                <th>Version</th>
+                                <th>Exploit Title</th>
+                                <th>Path</th>
+                            </tr>
+                        </thead>
+                        <tbody>
                 """
                 for vuln in scan["vulnerability_results"].get("vulnerabilities", []):
                     vulnerability_entries += f"""
@@ -109,8 +109,8 @@ class HTMLLogger:
                         <td>{self._parse_exploit_paths(vuln.get('vulnerabilities', 'No Paths'))}</td>
                     </tr>
                     """
-            vulnerability_entries += "</tbody></table>"
-
+            vulnerability_entries += """</tbody></table>
+                                    </div> """
         # Replace placeholders in the template
         wifi_log_content = wifi_log_template.replace("{ssid}", ssid)
         wifi_log_content = wifi_log_content.replace("{scan_entries}", scan_entries)
