@@ -1,0 +1,36 @@
+body { 
+    font-family: Arial, sans-serif; 
+    margin: 20px;
+}
+
+.scan-entry { 
+    margin-bottom: 20px; 
+    padding: 10px; 
+    border: 1px solid #ddd; 
+    border-radius: 5px; 
+    background-color: #f9f9f9; 
+}
+
+.scan-summary { 
+    margin-bottom: 20px; 
+    background-color: #eaf7ff; 
+    border: 1px solid #ddd; 
+    border-radius: 5px; 
+    padding: 10px; 
+}
+
+table { 
+    width: 100%; 
+    border-collapse: collapse; 
+    margin-bottom: 30px;
+}
+
+th, td { 
+    text-align: left; 
+    padding: 8px; 
+    border: 1px solid #ddd; 
+}
+
+th { 
+    background-color: #f2f2f2; 
+}

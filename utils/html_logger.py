@@ -31,7 +31,7 @@ class HTMLLogger:
     def generate_html_from_json(self, ssid):
         json_file = os.path.join(self.json_dir, f"{ssid}.json")
         html_file = os.path.join(self.output_dir, f"{ssid}.html")
-        template_file = os.path.join("utils", "wifiLogTemplate.html")
+        template_file = os.path.join("utils", "webInterface/wifiLogTemplate.html")
 
         if not os.path.exists(json_file):
             print(f"[WARNING] No JSON file found for SSID: {ssid}. Cannot generate HTML log.")
@@ -52,10 +52,8 @@ class HTMLLogger:
         for scan in data["scans"]:
             if "result" in scan:
                 scan_entries += f"""
-                <div class="scan-summary">
-                <h2>Scan Summary</h2>
-                <p><b>Scan Conducted At:</b> {scan['timestamp']}</p>
                 <h3>Discovered Devices</h3>
+                <p><b>Scan Conducted At:</b> {scan['timestamp']}</p>
                 <table>
                     <thead>
                         <tr>
@@ -77,26 +75,23 @@ class HTMLLogger:
                     """
                 scan_entries += "</tbody></table>"
         
-            scan_entries += "</div>"
         vulnerability_entries = ""
         for scan in data["scans"]:
             if "vulnerability_results" in scan:
                 vulnerability_entries += f"""
-                <div class="vulnerability-details">
-                    <h3 style="color:red;">Vulnerability Details</h3>
-                    <p><b>Scan Conducted At:</b> {scan['timestamp']}</p>
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Target</th>
-                                <th>Port</th>
-                                <th>Service</th>
-                                <th>Version</th>
-                                <th>Exploit Title</th>
-                                <th>Path</th>
-                            </tr>
-                        </thead>
-                        <tbody>
+                <p><b>Scan Conducted At:</b> {scan['timestamp']}</p>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Target</th>
+                            <th>Port</th>
+                            <th>Service</th>
+                            <th>Version</th>
+                            <th>Exploit Title</th>
+                            <th>Path</th>
+                        </tr>
+                    </thead>
+                    <tbody>
                 """
                 for vuln in scan["vulnerability_results"].get("vulnerabilities", []):
                     vulnerability_entries += f"""
@@ -109,8 +104,8 @@ class HTMLLogger:
                         <td>{self._parse_exploit_paths(vuln.get('vulnerabilities', 'No Paths'))}</td>
                     </tr>
                     """
-            vulnerability_entries += """</tbody></table>
-                                    </div> """
+            vulnerability_entries += """</tbody></table>"""
+
         # Replace placeholders in the template
         wifi_log_content = wifi_log_template.replace("{ssid}", ssid)
         wifi_log_content = wifi_log_content.replace("{scan_entries}", scan_entries)
@@ -119,9 +114,6 @@ class HTMLLogger:
         with open(html_file, "w") as file:
             file.write(wifi_log_content)
 
-        print("Scan Entries:", scan_entries)
-        print("Vulnerability Entries:", vulnerability_entries)
-        
         print(f"[INFO] HTML log updated: {html_file}")
 
     def _parse_nmap_result(self, result):
