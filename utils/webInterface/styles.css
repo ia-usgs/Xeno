@@ -1,36 +1,60 @@
-body { 
-    font-family: Arial, sans-serif; 
-    margin: 20px;
+body {
+    font-family: 'Share Tech Mono', monospace;
+    background-color: #0a0f1c;
+    color: #d1f7ff;
+    margin: 0;
+    padding: 0 2rem;
 }
-
-.scan-entry { 
-    margin-bottom: 20px; 
-    padding: 10px; 
-    border: 1px solid #ddd; 
-    border-radius: 5px; 
-    background-color: #f9f9f9; 
+header {
+    background-color: #0f172a;
+    padding: 1.5rem;
+    border-bottom: 2px solid #22d3ee;
+    text-align: center;
 }
-
-.scan-summary { 
-    margin-bottom: 20px; 
-    background-color: #eaf7ff; 
-    border: 1px solid #ddd; 
-    border-radius: 5px; 
-    padding: 10px; 
+header h1 {
+    font-size: 2rem;
+    margin: 0;
+    color: #22d3ee;
+    text-shadow: 0 0 5px #22d3ee;
 }
-
-table { 
-    width: 100%; 
-    border-collapse: collapse; 
-    margin-bottom: 30px;
+section {
+    margin: 2rem 0;
 }
-
-th, td { 
-    text-align: left; 
-    padding: 8px; 
-    border: 1px solid #ddd; 
+h2, h3 {
+    color: #7dd3fc;
+    border-bottom: 1px solid #334155;
+    padding-bottom: 0.5rem;
 }
-
-th { 
-    background-color: #f2f2f2; 
+table {
+    width: 100%;
+    border-collapse: collapse;
+    background-color: #1e293b;
+    margin: 1rem 0;
+}
+th, td {
+    border: 1px solid #334155;
+    padding: 0.75rem;
+    text-align: left;
+}
+th {
+    background-color: #0f172a;
+    color: #f0fdfa;
+}
+tr:nth-child(even) {
+    background-color: #0f172a;
+}
+tr:hover {
+    background-color: #334155;
+}
+.timestamp {
+    font-style: italic;
+    color: #94a3b8;
+}
+footer {
+    text-align: center;
+    font-size: 0.9rem;
+    color: #64748b;
+    margin-top: 2rem;
+    border-top: 1px solid #334155;
+    padding-top: 1rem;
 }
