@@ -296,7 +296,7 @@ This project is open for contributions! Feel free to fork the repository and sub
 
 ### **Disclaimer**
 
-This project is intended for **educational and ethical penetration testing** only. Unauthorized use on networks or devices without permission is illegal and punishable by law.
+This project is intended for **educational and ethical penetration testing** only. Unauthorized use on networks or devices is illegal and punishable by law.
 
 **Use responsibly.**
 
