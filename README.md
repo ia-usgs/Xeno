@@ -71,6 +71,71 @@ The purpose of this tool is to teach you what weaknesses there are within your o
 
 ## **Installation**
 
+
+---
+
+## Using the Community Image
+
+If you are using the official **Xeno Community Image** (pre-installed with everything), most components are already configured — including the default pet name: `"Xeno"`.
+
+### What’s Already Set Up
+
+- All Python dependencies, tools, and services.
+- `state.json` initialized with default values.
+- e-Paper display drivers installed.
+- Systemd service for Xeno is enabled.
+
+---
+
+### Changing the Pet Name (Optional)
+
+To personalize your Xeno’s identity:
+
+1. Open the state file:
+   ```bash
+   sudo nano /home/pi/xeno/state.json
+   ```
+
+2. Locate the line:
+   ```json
+   "pet_name": "Xeno"
+   ```
+
+3. Change `"Xeno"` to your preferred name:
+   ```json
+   "pet_name": "CyberDog"
+   ```
+
+4. Save and exit:
+   - Press `CTRL + X`
+   - Then press `Y`
+   - Then press `Enter`
+
+---
+
+### Recommended Next Steps
+
+After booting for the first time:
+
+- **Connect to Wi-Fi**:
+  Edit your networks in `/home/pi/xeno/config/wifi_credentials.json`.
+
+- **Customize Password Lists**:
+  Add your own to `/home/pi/xeno/config/password_list.txt`.
+
+- **Start Xeno Manually (only if you stopped the xeno service)** (optional):
+  ```bash
+  sudo python3 /home/pi/xeno/main.py
+  ```
+
+- **Or View Logs**:
+  ```bash
+  sudo journalctl -u xeno.service -f
+  ```
+
+---
+
+
 ### **Automatic Installation (Recommended)**
 
 Be sure to use the Raspberry Pi OS lite 64 bit version!!!! (Unless RPi0)
