@@ -69,10 +69,7 @@ The purpose of this tool is to teach you what weaknesses there are within your o
 
 ---
 
-## **Installation**
-
-
----
+# **Installation**
 
 ## Using the Community Image
 
