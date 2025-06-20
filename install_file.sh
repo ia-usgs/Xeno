@@ -72,11 +72,11 @@ if ! sudo apt-get install -y exploitdb; then
     # Manual installation of searchsploit from the new repository
     SEARCHSPLOIT_DIR="/usr/share/exploitdb"
     if [ ! -d "$SEARCHSPLOIT_DIR" ]; then
-        echo -e "${GREEN}Cloning ExploitDB repository from GitLab...${RESET}"
-        sudo git clone https://gitlab.com/exploit-database/exploitdb.git "$SEARCHSPLOIT_DIR"
+        echo -e "${GREEN}Cloning ExploitDB repository from GitLab (shallow)...${RESET}"
+        sudo git clone --depth 1 https://gitlab.com/exploit-database/exploitdb.git "$SEARCHSPLOIT_DIR"
     else
         echo -e "${GREEN}ExploitDB directory already exists. Pulling latest changes...${RESET}"
-        sudo git -C "$SEARCHSPLOIT_DIR" pull
+        sudo git -C "$SEARCHSPLOIT_DIR" pull --depth 1
     fi
 
     # Create symlink for searchsploit
@@ -114,54 +114,54 @@ else
 fi
 
 # Step 4.2: Verify Shodan Installation
-echo -e "${GREEN}[4.2] Verifying Shodan installation...${RESET}"
-python3 - <<EOF
-try:
-    import shodan
-    print("${GREEN}Shodan installed correctly.${RESET}")
-except ImportError as e:
-    print("${RED}Shodan installation failed. Please check manually.${RESET}", e)
-EOF
+#echo -e "${GREEN}[4.2] Verifying Shodan installation...${RESET}"
+#python3 - <<EOF
+#try:
+#    import shodan
+#    print("${GREEN}Shodan installed correctly.${RESET}")
+#except ImportError as e:
+#    print("${RED}Shodan installation failed. Please check manually.${RESET}", e)
+#EOF
 
 # Step 4.3: Install and Configure theHarvester
-echo -e "${GREEN}[4.3] Installing and configuring theHarvester...${RESET}"
+#echo -e "${GREEN}[4.3] Installing and configuring theHarvester...${RESET}"
 
 # Define the directory for theHarvester
-THE_HARVESTER_DIR="/home/pi/xeno/theHarvester"
+#THE_HARVESTER_DIR="/home/pi/xeno/theHarvester"
 
 # Remove any previous installation
-if [ -d "$THE_HARVESTER_DIR" ]; then
-    echo -e "${GREEN}Removing existing theHarvester directory...${RESET}"
-    sudo rm -rf "$THE_HARVESTER_DIR"
-fi
+#if [ -d "$THE_HARVESTER_DIR" ]; then
+#    echo -e "${GREEN}Removing existing theHarvester directory...${RESET}"
+#    sudo rm -rf "$THE_HARVESTER_DIR"
+#fi
 
 # Clone the theHarvester repository
-echo -e "${GREEN}Cloning theHarvester repository...${RESET}"
-git clone https://github.com/laramies/theHarvester.git "$THE_HARVESTER_DIR"
+#echo -e "${GREEN}Cloning theHarvester repository...${RESET}"
+#git clone https://github.com/laramies/theHarvester.git "$THE_HARVESTER_DIR"
 
 # Change to theHarvester directory
-cd "$THE_HARVESTER_DIR"
+#cd "$THE_HARVESTER_DIR"
 
 # Install dependencies with --break-system-packages
-echo -e "${GREEN}Installing theHarvester dependencies...${RESET}"
-sudo pip3 install -r requirements/base.txt --break-system-packages
+#echo -e "${GREEN}Installing theHarvester dependencies...${RESET}"
+#sudo pip3 install -r requirements/base.txt --break-system-packages
 
 # Add an alias for theHarvester to make it accessible system-wide
-if ! grep -q "alias theharvester=" ~/.bashrc; then
-    echo "alias theharvester='python3 $THE_HARVESTER_DIR/theHarvester.py'" >> ~/.bashrc
-    echo -e "${GREEN}Added alias for theHarvester to .bashrc.${RESET}"
-fi
+#if ! grep -q "alias theharvester=" ~/.bashrc; then
+#    echo "alias theharvester='python3 $THE_HARVESTER_DIR/theHarvester.py'" >> ~/.bashrc
+#    echo -e "${GREEN}Added alias for theHarvester to .bashrc.${RESET}"
+#fi
 
 # Apply alias changes
-source ~/.bashrc
+#source ~/.bashrc
 
 # Verify theHarvester installation
-echo -e "${GREEN}Verifying theHarvester installation...${RESET}"
-python3 "$THE_HARVESTER_DIR/theHarvester.py" -h
+#echo -e "${GREEN}Verifying theHarvester installation...${RESET}"
+#python3 "$THE_HARVESTER_DIR/theHarvester.py" -h
 
 # Test the alias
-echo -e "${GREEN}Testing theHarvester alias...${RESET}"
-theharvester -h
+#echo -e "${GREEN}Testing theHarvester alias...${RESET}"
+#theharvester -h
 
 # Verify Python libraries
 python3 - <<EOF
