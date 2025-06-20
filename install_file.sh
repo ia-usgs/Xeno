@@ -35,25 +35,26 @@ CLONE_DIR="/home/pi/xeno"
 # Check if the directory exists
 if [ -d "$CLONE_DIR" ]; then
     if [ -d "$CLONE_DIR/.git" ]; then
-        # If it's a valid Git repository, pull the latest changes
-        echo -e "${GREEN}Xeno repository already exists at $CLONE_DIR. Pulling the latest changes...${RESET}"
-        git config --global --add safe.directory "$CLONE_DIR"
-        cd "$CLONE_DIR" && git pull
+        # If it's a valid Git repository, delete and re-clone shallow
+        echo -e "${YELLOW}Xeno repository already exists at $CLONE_DIR. Removing and performing a shallow re-clone...${RESET}"
+        sudo rm -rf "$CLONE_DIR"
+        git clone --depth 1 "$REPO_URL" "$CLONE_DIR"
     else
         # If the directory exists but is not a valid repository, delete and re-clone
         echo -e "${RED}$CLONE_DIR exists but is not a valid Git repository. Re-cloning...${RESET}"
         sudo rm -rf "$CLONE_DIR"
-        git clone "$REPO_URL" "$CLONE_DIR"
+        git clone --depth 1 "$REPO_URL" "$CLONE_DIR"
     fi
 else
-    # If the directory doesn't exist, clone the repository
-    echo -e "${GREEN}Cloning the repository into $CLONE_DIR...${RESET}"
-    git clone "$REPO_URL" "$CLONE_DIR"
+    # If the directory doesn't exist, perform a shallow clone
+    echo -e "${GREEN}Cloning the repository into $CLONE_DIR with depth=1...${RESET}"
+    git clone --depth 1 "$REPO_URL" "$CLONE_DIR"
 fi
 
 # Set directory permissions to make it accessible to all users
 sudo chmod -R 777 "$CLONE_DIR"
-sudo chown -R pi:pi /home/pi/xeno
+sudo chown -R pi:pi "$CLONE_DIR"
+
 
 # Step 2: Update and Upgrade System
 echo -e "${GREEN}[2/7] Updating and upgrading system...${RESET}"
