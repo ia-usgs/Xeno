@@ -114,6 +114,17 @@ else
     echo -e "${GREEN}Paramiko is installed successfully.${RESET}"
 fi
 
+# Step 4.2: Verify pysmb installation
+echo -e "${GREEN}[4.0.2] Verifying pysmb installation...${RESET}"
+python3 -c "from smb.SMBConnection import SMBConnection" 2>/dev/null
+
+if [ $? -ne 0 ]; then
+    echo -e "${RED}pysmb not installed. Retrying installation...${RESET}"
+    sudo pip3 install pysmb --break-system-packages
+else
+    echo -e "${GREEN}pysmb is installed successfully.${RESET}"
+fi
+
 # Step 4.1: Manually Install Shodan
 #echo -e "${GREEN}[4.1] Installing Shodan manually...${RESET}"
 
