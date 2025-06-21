@@ -102,6 +102,18 @@ fi
 echo -e "${GREEN}[4/7] Installing Python dependencies...${RESET}"
 sudo pip3 install python-nmap pyexploitdb paramiko pysmb requests pygame pillow shodan requests-futures colorama python-whois dnsrecon --break-system-packages
 
+# Step 4.1: Verify paramiko installation
+echo -e "${GREEN}[4.0.1] Verifying paramiko installation...${RESET}"
+python3 -c "import paramiko" 2>/dev/null
+
+if [ $? -ne 0 ]; then
+    echo -e "${RED}Paramiko not installed. Installing system dependencies and retrying...${RESET}"
+    sudo apt-get update && sudo apt-get install -y libssl-dev libffi-dev build-essential pkg-config
+    sudo pip3 install paramiko --break-system-packages
+else
+    echo -e "${GREEN}Paramiko is installed successfully.${RESET}"
+fi
+
 # Step 4.1: Manually Install Shodan
 #echo -e "${GREEN}[4.1] Installing Shodan manually...${RESET}"
 
