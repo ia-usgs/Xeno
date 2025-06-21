@@ -102,7 +102,7 @@ fi
 echo -e "${GREEN}[4/7] Installing Python dependencies...${RESET}"
 sudo pip3 install python-nmap pyexploitdb paramiko pysmb requests pygame pillow shodan requests-futures colorama python-whois dnsrecon --break-system-packages
 
-# Step 4.1: Verify paramiko installation
+# Step 4.1: Special check for paramiko (with system dependencies if missing)
 echo -e "${GREEN}[4.0.1] Verifying paramiko installation...${RESET}"
 python3 -c "import paramiko" 2>/dev/null
 
@@ -114,17 +114,35 @@ else
     echo -e "${GREEN}Paramiko is installed successfully.${RESET}"
 fi
 
-# Step 4.2: Verify pysmb installation
-echo -e "${GREEN}[4.0.2] Verifying pysmb installation...${RESET}"
-python3 -c "from smb.SMBConnection import SMBConnection" 2>/dev/null
+# Step 4.2: Reattempt failed installs for other modules
+declare -A modules=(
+    ["nmap"]="python-nmap"
+    ["pyexploitdb"]="pyexploitdb"
+    ["smb.SMBConnection"]="pysmb"
+    ["requests"]="requests"
+    ["pygame"]="pygame"
+    ["PIL"]="pillow"
+    ["shodan"]="shodan"
+    ["requests_futures"]="requests-futures"
+    ["colorama"]="colorama"
+    ["whois"]="python-whois"
+    ["dnsrecon"]="dnsrecon"
+)
 
-if [ $? -ne 0 ]; then
-    echo -e "${RED}pysmb not installed. Retrying installation...${RESET}"
-    sudo pip3 install pysmb --break-system-packages
-else
-    echo -e "${GREEN}pysmb is installed successfully.${RESET}"
-fi
+for import_path in "${!modules[@]}"; do
+    # Skip paramiko since it's already handled
+    if [ "$import_path" == "paramiko" ]; then continue; fi
 
+    echo -e "${GREEN}Verifying ${modules[$import_path]}...${RESET}"
+    python3 -c "import $import_path" 2>/dev/null
+
+    if [ $? -ne 0 ]; then
+        echo -e "${RED}${modules[$import_path]} missing. Reinstalling...${RESET}"
+        sudo pip3 install "${modules[$import_path]}" --break-system-packages
+    else
+        echo -e "${GREEN}${modules[$import_path]} is installed.${RESET}"
+    fi
+done
 # Step 4.1: Manually Install Shodan
 #echo -e "${GREEN}[4.1] Installing Shodan manually...${RESET}"
 
