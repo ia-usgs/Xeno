@@ -100,18 +100,18 @@ fi
 
 # Step 4: Install Python Dependencies
 echo -e "${GREEN}[4/7] Installing Python dependencies...${RESET}"
-sudo pip3 install python-nmap pyexploitdb paramiko pysmb requests pygame pillow pandas shodan requests-futures colorama python-whois dnsrecon --break-system-packages
+sudo pip3 install python-nmap pyexploitdb paramiko pysmb requests pygame pillow shodan requests-futures colorama python-whois dnsrecon --break-system-packages
 
 # Step 4.1: Manually Install Shodan
-echo -e "${GREEN}[4.1] Installing Shodan manually...${RESET}"
+#echo -e "${GREEN}[4.1] Installing Shodan manually...${RESET}"
 
 # Clone Shodan from its repository (if applicable) or install using pip
-if ! pip3 list | grep -q shodan; then
-    echo -e "${GREEN}Installing Shodan package...${RESET}"
-    sudo pip3 install shodan --break-system-packages
-else
-    echo -e "${GREEN}Shodan is already installed.${RESET}"
-fi
+#if ! pip3 list | grep -q shodan; then
+#    echo -e "${GREEN}Installing Shodan package...${RESET}"
+#    sudo pip3 install shodan --break-system-packages
+#else
+#    echo -e "${GREEN}Shodan is already installed.${RESET}"
+#fi
 
 # Step 4.2: Verify Shodan Installation
 #echo -e "${GREEN}[4.2] Verifying Shodan installation...${RESET}"
