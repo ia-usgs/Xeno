@@ -35,25 +35,26 @@ CLONE_DIR="/home/pi/xeno"
 # Check if the directory exists
 if [ -d "$CLONE_DIR" ]; then
     if [ -d "$CLONE_DIR/.git" ]; then
-        # If it's a valid Git repository, pull the latest changes
-        echo -e "${GREEN}Xeno repository already exists at $CLONE_DIR. Pulling the latest changes...${RESET}"
-        git config --global --add safe.directory "$CLONE_DIR"
-        cd "$CLONE_DIR" && git pull
+        # If it's a valid Git repository, delete and re-clone shallow
+        echo -e "${YELLOW}Xeno repository already exists at $CLONE_DIR. Removing and performing a shallow re-clone...${RESET}"
+        sudo rm -rf "$CLONE_DIR"
+        git clone --depth 1 "$REPO_URL" "$CLONE_DIR"
     else
         # If the directory exists but is not a valid repository, delete and re-clone
         echo -e "${RED}$CLONE_DIR exists but is not a valid Git repository. Re-cloning...${RESET}"
         sudo rm -rf "$CLONE_DIR"
-        git clone "$REPO_URL" "$CLONE_DIR"
+        git clone --depth 1 "$REPO_URL" "$CLONE_DIR"
     fi
 else
-    # If the directory doesn't exist, clone the repository
-    echo -e "${GREEN}Cloning the repository into $CLONE_DIR...${RESET}"
-    git clone "$REPO_URL" "$CLONE_DIR"
+    # If the directory doesn't exist, perform a shallow clone
+    echo -e "${GREEN}Cloning the repository into $CLONE_DIR with depth=1...${RESET}"
+    git clone --depth 1 "$REPO_URL" "$CLONE_DIR"
 fi
 
 # Set directory permissions to make it accessible to all users
 sudo chmod -R 777 "$CLONE_DIR"
-sudo chown -R pi:pi /home/pi/xeno
+sudo chown -R pi:pi "$CLONE_DIR"
+
 
 # Step 2: Update and Upgrade System
 echo -e "${GREEN}[2/7] Updating and upgrading system...${RESET}"
@@ -71,11 +72,11 @@ if ! sudo apt-get install -y exploitdb; then
     # Manual installation of searchsploit from the new repository
     SEARCHSPLOIT_DIR="/usr/share/exploitdb"
     if [ ! -d "$SEARCHSPLOIT_DIR" ]; then
-        echo -e "${GREEN}Cloning ExploitDB repository from GitLab...${RESET}"
-        sudo git clone https://gitlab.com/exploit-database/exploitdb.git "$SEARCHSPLOIT_DIR"
+        echo -e "${GREEN}Cloning ExploitDB repository from GitLab (shallow)...${RESET}"
+        sudo git clone --depth 1 https://gitlab.com/exploit-database/exploitdb.git "$SEARCHSPLOIT_DIR"
     else
         echo -e "${GREEN}ExploitDB directory already exists. Pulling latest changes...${RESET}"
-        sudo git -C "$SEARCHSPLOIT_DIR" pull
+        sudo git -C "$SEARCHSPLOIT_DIR" pull --depth 1
     fi
 
     # Create symlink for searchsploit
@@ -99,68 +100,109 @@ fi
 
 # Step 4: Install Python Dependencies
 echo -e "${GREEN}[4/7] Installing Python dependencies...${RESET}"
-sudo pip3 install python-nmap pyexploitdb paramiko pysmb requests pygame pillow pandas shodan requests-futures colorama python-whois dnsrecon --break-system-packages
+sudo pip3 install python-nmap pyexploitdb paramiko pysmb requests pygame pillow shodan requests-futures colorama python-whois dnsrecon --break-system-packages
 
+# Step 4.1: Special check for paramiko (with system dependencies if missing)
+echo -e "${GREEN}[4.0.1] Verifying paramiko installation...${RESET}"
+python3 -c "import paramiko" 2>/dev/null
+
+if [ $? -ne 0 ]; then
+    echo -e "${RED}Paramiko not installed. Installing system dependencies and retrying...${RESET}"
+    sudo apt-get update && sudo apt-get install -y libssl-dev libffi-dev build-essential pkg-config
+    sudo pip3 install paramiko --break-system-packages
+else
+    echo -e "${GREEN}Paramiko is installed successfully.${RESET}"
+fi
+
+# Step 4.2: Reattempt failed installs for other modules
+declare -A modules=(
+    ["nmap"]="python-nmap"
+    ["pyexploitdb"]="pyexploitdb"
+    ["smb.SMBConnection"]="pysmb"
+    ["requests"]="requests"
+    ["pygame"]="pygame"
+    ["PIL"]="pillow"
+    #["shodan"]="shodan"
+    ["requests_futures"]="requests-futures"
+    ["colorama"]="colorama"
+    ["whois"]="python-whois"
+    ["dnsrecon"]="dnsrecon"
+)
+
+for import_path in "${!modules[@]}"; do
+    # Skip paramiko since it's already handled
+    if [ "$import_path" == "paramiko" ]; then continue; fi
+
+    echo -e "${GREEN}Verifying ${modules[$import_path]}...${RESET}"
+    python3 -c "import $import_path" 2>/dev/null
+
+    if [ $? -ne 0 ]; then
+        echo -e "${RED}${modules[$import_path]} missing. Reinstalling...${RESET}"
+        sudo pip3 install "${modules[$import_path]}" --break-system-packages
+    else
+        echo -e "${GREEN}${modules[$import_path]} is installed.${RESET}"
+    fi
+done
 # Step 4.1: Manually Install Shodan
-echo -e "${GREEN}[4.1] Installing Shodan manually...${RESET}"
+#echo -e "${GREEN}[4.1] Installing Shodan manually...${RESET}"
 
 # Clone Shodan from its repository (if applicable) or install using pip
-if ! pip3 list | grep -q shodan; then
-    echo -e "${GREEN}Installing Shodan package...${RESET}"
-    sudo pip3 install shodan --break-system-packages
-else
-    echo -e "${GREEN}Shodan is already installed.${RESET}"
-fi
+#if ! pip3 list | grep -q shodan; then
+#    echo -e "${GREEN}Installing Shodan package...${RESET}"
+#    sudo pip3 install shodan --break-system-packages
+#else
+#    echo -e "${GREEN}Shodan is already installed.${RESET}"
+#fi
 
 # Step 4.2: Verify Shodan Installation
-echo -e "${GREEN}[4.2] Verifying Shodan installation...${RESET}"
-python3 - <<EOF
-try:
-    import shodan
-    print("${GREEN}Shodan installed correctly.${RESET}")
-except ImportError as e:
-    print("${RED}Shodan installation failed. Please check manually.${RESET}", e)
-EOF
+#echo -e "${GREEN}[4.2] Verifying Shodan installation...${RESET}"
+#python3 - <<EOF
+#try:
+#    import shodan
+#    print("${GREEN}Shodan installed correctly.${RESET}")
+#except ImportError as e:
+#    print("${RED}Shodan installation failed. Please check manually.${RESET}", e)
+#EOF
 
 # Step 4.3: Install and Configure theHarvester
-echo -e "${GREEN}[4.3] Installing and configuring theHarvester...${RESET}"
+#echo -e "${GREEN}[4.3] Installing and configuring theHarvester...${RESET}"
 
 # Define the directory for theHarvester
-THE_HARVESTER_DIR="/home/pi/xeno/theHarvester"
+#THE_HARVESTER_DIR="/home/pi/xeno/theHarvester"
 
 # Remove any previous installation
-if [ -d "$THE_HARVESTER_DIR" ]; then
-    echo -e "${GREEN}Removing existing theHarvester directory...${RESET}"
-    sudo rm -rf "$THE_HARVESTER_DIR"
-fi
+#if [ -d "$THE_HARVESTER_DIR" ]; then
+#    echo -e "${GREEN}Removing existing theHarvester directory...${RESET}"
+#    sudo rm -rf "$THE_HARVESTER_DIR"
+#fi
 
 # Clone the theHarvester repository
-echo -e "${GREEN}Cloning theHarvester repository...${RESET}"
-git clone https://github.com/laramies/theHarvester.git "$THE_HARVESTER_DIR"
+#echo -e "${GREEN}Cloning theHarvester repository...${RESET}"
+#git clone https://github.com/laramies/theHarvester.git "$THE_HARVESTER_DIR"
 
 # Change to theHarvester directory
-cd "$THE_HARVESTER_DIR"
+#cd "$THE_HARVESTER_DIR"
 
 # Install dependencies with --break-system-packages
-echo -e "${GREEN}Installing theHarvester dependencies...${RESET}"
-sudo pip3 install -r requirements/base.txt --break-system-packages
+#echo -e "${GREEN}Installing theHarvester dependencies...${RESET}"
+#sudo pip3 install -r requirements/base.txt --break-system-packages
 
 # Add an alias for theHarvester to make it accessible system-wide
-if ! grep -q "alias theharvester=" ~/.bashrc; then
-    echo "alias theharvester='python3 $THE_HARVESTER_DIR/theHarvester.py'" >> ~/.bashrc
-    echo -e "${GREEN}Added alias for theHarvester to .bashrc.${RESET}"
-fi
+#if ! grep -q "alias theharvester=" ~/.bashrc; then
+#    echo "alias theharvester='python3 $THE_HARVESTER_DIR/theHarvester.py'" >> ~/.bashrc
+#    echo -e "${GREEN}Added alias for theHarvester to .bashrc.${RESET}"
+#fi
 
 # Apply alias changes
-source ~/.bashrc
+#source ~/.bashrc
 
 # Verify theHarvester installation
-echo -e "${GREEN}Verifying theHarvester installation...${RESET}"
-python3 "$THE_HARVESTER_DIR/theHarvester.py" -h
+#echo -e "${GREEN}Verifying theHarvester installation...${RESET}"
+#python3 "$THE_HARVESTER_DIR/theHarvester.py" -h
 
 # Test the alias
-echo -e "${GREEN}Testing theHarvester alias...${RESET}"
-theharvester -h
+#echo -e "${GREEN}Testing theHarvester alias...${RESET}"
+#theharvester -h
 
 # Verify Python libraries
 python3 - <<EOF
