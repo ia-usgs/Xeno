@@ -52,7 +52,6 @@ class HTMLLogger:
         for scan in data["scans"]:
             if "result" in scan:
                 scan_entries += f"""
-                <h3>Discovered Devices</h3>
                 <p><b>Scan Conducted At:</b> {scan['timestamp']}</p>
                 <table>
                     <thead>
