@@ -343,33 +343,36 @@ To run the script continuously on system startup:
 ---
 ## **HTML Log Interface Overview**
 
-The latest update introduces a visually enhanced **HTML Logging Interface** to make reviewing scan results faster and more intuitive.
+The latest update introduces a visually enhanced **HTML Logging Interface**, designed to make reviewing scan results faster, clearer, and more intuitive.
 
-<img src="https://github.com/user-attachments/assets/8759cf6a-52e3-496b-acdc-6cea9888b4c4" alt="HTML Log Overview" width="500" height="500">
-
-### **Scan Summary Panel:**
-
+### **Scan Summary Panel**
 ![Device Summary Table](https://github.com/user-attachments/assets/e1a7bdc2-90b3-43da-a120-577c757d5ed5)
 
-- Lists all devices found during the scan.
-- **Displays:**
-  - IP Address
-  - MAC Address
-  - Vendor/Manufacturer
+This section lists all devices discovered during the scan.
+
+**Details displayed:**
+- IP Address  
+- MAC Address  
+- Vendor/Manufacturer  
+
+Use this panel to quickly identify devices on the network and verify expected vs. unexpected clients.
 
 ### **Vulnerability Details Table**
-
 ![Vulnerability Table](https://github.com/user-attachments/assets/4b5b080b-d0f4-4b6f-a2c0-b3583ab00f8c)
 
-- Shows vulnerabilities detected during each scan.
-- **Columns include:**
-  - Target IP
-  - Port
-  - Service Name
-  - Version
-  - Matched Exploit
-  - Exploit Title
-  - Path
+This table outlines vulnerabilities detected during the scan.
+
+**Each row includes:**
+- Target IP  
+- Port  
+- Service Name  
+- Version  
+- Matched Exploit  
+- Exploit Title  
+- Exploit Path  
+
+Use this information to assess potential risks and follow up with deeper investigation or patching as needed.
+
 ---
 
 ## **Debugging**
