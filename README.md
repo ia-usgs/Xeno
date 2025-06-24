@@ -345,9 +345,9 @@ To run the script continuously on system startup:
 
 The latest update introduces a visually enhanced **HTML Logging Interface** to make reviewing scan results faster and more intuitive.
 
-![HTML Log UI Overview](https://github.com/user-attachments/assets/8759cf6a-52e3-496b-acdc-6cea9888b4c4)
+<img src="https://github.com/user-attachments/assets/8759cf6a-52e3-496b-acdc-6cea9888b4c4" alt="HTML Log Overview" width="500" height="500">
 
-### **Scan Summary Panel**
+### **Scan Summary Panel:**
 
 ![Device Summary Table](https://github.com/user-attachments/assets/e1a7bdc2-90b3-43da-a120-577c757d5ed5)
 
