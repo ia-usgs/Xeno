@@ -341,6 +341,39 @@ To run the script continuously on system startup:
 - Modify workflows in `main.py`.
 
 ---
+## **HTML Log Interface Overview**
+
+The latest update introduces a visually enhanced **HTML Logging Interface**, designed to make reviewing scan results clearer, and more intuitive.
+
+### **Scan Summary Panel**
+![Device Summary Table](https://github.com/user-attachments/assets/e1a7bdc2-90b3-43da-a120-577c757d5ed5)
+
+Lists all devices discovered during each scan.
+
+**Details displayed:**
+- IP Address  
+- MAC Address  
+- Vendor/Manufacturer  
+
+Use this panel to quickly identify devices on the network and verify expected vs. unexpected clients.
+
+### **Vulnerability Details Table**
+![Vulnerability Table](https://github.com/user-attachments/assets/4b5b080b-d0f4-4b6f-a2c0-b3583ab00f8c)
+
+Outlines vulnerabilities detected during each scan.
+
+**Each row includes:**
+- Target IP  
+- Port  
+- Service Name  
+- Version  
+- Matched Exploit  
+- Exploit Title  
+- Exploit Path  
+
+Use this information to assess potential risks.
+
+---
 
 ## **Debugging**
 - If you get `GPIO Busy` while running manually in CLI it is because the service is running.
