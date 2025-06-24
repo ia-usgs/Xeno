@@ -343,12 +343,12 @@ To run the script continuously on system startup:
 ---
 ## **HTML Log Interface Overview**
 
-The latest update introduces a visually enhanced **HTML Logging Interface**, designed to make reviewing scan results faster, clearer, and more intuitive.
+The latest update introduces a visually enhanced **HTML Logging Interface**, designed to make reviewing scan results clearer, and more intuitive.
 
 ### **Scan Summary Panel**
 ![Device Summary Table](https://github.com/user-attachments/assets/e1a7bdc2-90b3-43da-a120-577c757d5ed5)
 
-This section lists all devices discovered during the scan.
+Lists all devices discovered during each scan.
 
 **Details displayed:**
 - IP Address  
@@ -360,7 +360,7 @@ Use this panel to quickly identify devices on the network and verify expected vs
 ### **Vulnerability Details Table**
 ![Vulnerability Table](https://github.com/user-attachments/assets/4b5b080b-d0f4-4b6f-a2c0-b3583ab00f8c)
 
-This table outlines vulnerabilities detected during the scan.
+Outlines vulnerabilities detected during each scan.
 
 **Each row includes:**
 - Target IP  
@@ -371,7 +371,7 @@ This table outlines vulnerabilities detected during the scan.
 - Exploit Title  
 - Exploit Path  
 
-Use this information to assess potential risks and follow up with deeper investigation or patching as needed.
+Use this information to assess potential risks.
 
 ---
 
