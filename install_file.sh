@@ -104,7 +104,7 @@ fi
 
 # Step 4: Install Python Dependencies
 echo -e "${GREEN}[4/7] Installing Python dependencies...${RESET}"
-sudo pip3 install python-nmap pyexploitdb paramiko pysmb requests pygame pillow shodan requests-futures colorama python-whois dnsrecon --break-system-packages
+sudo pip3 install python-nmap pyexploitdb paramiko pysmb requests pygame pillow shodan requests-futures colorama python-whois dnsrecon flask --break-system-packages
 
 # Step 4.1: Special check for paramiko (with system dependencies if missing)
 echo -e "${GREEN}[4.0.1] Verifying paramiko installation...${RESET}"
@@ -131,6 +131,7 @@ declare -A modules=(
     ["colorama"]="colorama"
     ["whois"]="python-whois"
     ["dnsrecon"]="dnsrecon"
+    ["flask"]="flask"
 )
 
 for import_path in "${!modules[@]}"; do
@@ -345,7 +346,7 @@ fi
 # Install lg library
 echo -e "${GREEN}Installing lg library...${RESET}"
 wget https://github.com/joan2937/lg/archive/master.zip
-unzip master.zip
+unzip -o master.zip
 cd lg-master
 make
 sudo make install
