@@ -32,6 +32,9 @@ echo -e "${GREEN}[1/7] Cloning the Xeno repository...${RESET}"
 REPO_URL="https://github.com/ia-usgs/Xeno.git"
 CLONE_DIR="/home/pi/xeno"
 
+# Move to a safe location before potentially deleting the working directory
+cd "$HOME" || exit 1
+
 # Check if the directory exists
 if [ -d "$CLONE_DIR" ]; then
     if [ -d "$CLONE_DIR/.git" ]; then
@@ -50,6 +53,7 @@ else
     echo -e "${GREEN}Cloning the repository into $CLONE_DIR with depth=1...${RESET}"
     git clone --depth 1 "$REPO_URL" "$CLONE_DIR"
 fi
+
 
 # Set directory permissions to make it accessible to all users
 sudo chmod -R 777 "$CLONE_DIR"
