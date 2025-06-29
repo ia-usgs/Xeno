@@ -25,40 +25,36 @@ else
     echo -e "${GREEN}Pip is already installed.${RESET}"
 fi
 
-# Step 1: Clone the Repository
-echo -e "${GREEN}[1/7] Cloning the Xeno repository...${RESET}"
+# Step 1: Clone or Update the Repository
+echo -e "${GREEN}[1/7] Cloning or updating the Xeno repository...${RESET}"
 
 # Define repository URL and clone path
 REPO_URL="https://github.com/ia-usgs/Xeno.git"
 CLONE_DIR="/home/pi/xeno"
 
-# Move to a safe location before potentially deleting the working directory
 cd "$HOME" || exit 1
 
-# Check if the directory exists
-if [ -d "$CLONE_DIR" ]; then
-    if [ -d "$CLONE_DIR/.git" ]; then
-        # If it's a valid Git repository, delete and re-clone shallow
-        echo -e "${YELLOW}Xeno repository already exists at $CLONE_DIR. Removing and performing a shallow re-clone...${RESET}"
-        sudo rm -rf "$CLONE_DIR"
-        git clone --depth 1 "$REPO_URL" "$CLONE_DIR"
-    else
-        # If the directory exists but is not a valid repository, delete and re-clone
-        echo -e "${RED}$CLONE_DIR exists but is not a valid Git repository. Re-cloning...${RESET}"
-        sudo rm -rf "$CLONE_DIR"
-        git clone --depth 1 "$REPO_URL" "$CLONE_DIR"
-    fi
+# If directory exists and is a git repo, pull latest changes
+if [ -d "$CLONE_DIR/.git" ]; then
+    echo -e "${GREEN}Existing Git repository found. Pulling latest changes...${RESET}"
+    cd "$CLONE_DIR"
+    git reset --hard HEAD
+    git clean -fd
+    git pull origin main || echo -e "${RED}Git pull failed. Continuing with existing version...${RESET}"
+# If directory exists but is not a repo, delete and clone
+elif [ -d "$CLONE_DIR" ]; then
+    echo -e "${RED}$CLONE_DIR exists but is not a Git repository. Removing and cloning...${RESET}"
+    sudo rm -rf "$CLONE_DIR"
+    git clone "$REPO_URL" "$CLONE_DIR"
+# If directory doesn't exist, clone fresh
 else
-    # If the directory doesn't exist, perform a shallow clone
-    echo -e "${GREEN}Cloning the repository into $CLONE_DIR with depth=1...${RESET}"
-    git clone --depth 1 "$REPO_URL" "$CLONE_DIR"
+    echo -e "${GREEN}Cloning repository into $CLONE_DIR...${RESET}"
+    git clone "$REPO_URL" "$CLONE_DIR"
 fi
 
-
-# Set directory permissions to make it accessible to all users
+# Set directory permissions
 sudo chmod -R 777 "$CLONE_DIR"
 sudo chown -R pi:pi "$CLONE_DIR"
-
 
 # Step 2: Update and Upgrade System
 echo -e "${GREEN}[2/7] Updating and upgrading system...${RESET}"
