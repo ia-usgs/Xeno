@@ -267,6 +267,46 @@ EOF
 echo -e "${GREEN}Enabling Xeno service but not starting it yet.${RESET}"
 sudo systemctl enable xeno.service
 
+# Conditionally set up the web server if Xeno service was enabled successfully
+if systemctl list-unit-files | grep -q 'xeno.service'; then
+    echo -e "${GREEN}Xeno service exists. Setting up web server...${RESET}"
+else
+    echo -e "${YELLOW}Xeno service not detected. Attempting to create and enable it again...${RESET}"
+    sudo systemctl enable xeno.service
+    sudo systemctl daemon-reexec
+    sudo systemctl daemon-reload
+fi
+
+# Re-check and proceed if xeno.service is now available
+if systemctl list-unit-files | grep -q 'xeno.service'; then
+    echo -e "${GREEN}Setting up xeno-web.service...${RESET}"
+
+    sudo bash -c "cat > /etc/systemd/system/xeno-web.service" <<EOF
+[Unit]
+Description=Xeno Web Server
+After=network.target xeno.service
+Requires=xeno.service
+
+[Service]
+ExecStart=/usr/bin/python3 $CLONE_DIR/web_server.py
+WorkingDirectory=$CLONE_DIR
+Restart=always
+User=pi
+Environment="PYTHONUNBUFFERED=1"
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+    sudo systemctl daemon-reexec
+    sudo systemctl daemon-reload
+    sudo systemctl enable xeno-web.service
+
+    echo -e "${GREEN}Web server configured to launch with Xeno.${RESET}"
+else
+    echo -e "${RED}Xeno service still not found. Web server setup skipped.${RESET}"
+fi
+
 # Check if WiFi module is enabled and enable it if it's not
 echo -e "${GREEN}[Checking WiFi Module Status]${RESET}"
 WIFI_STATUS=$(nmcli radio wifi)
