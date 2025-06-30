@@ -54,6 +54,7 @@ The purpose of this tool is to teach you what weaknesses there are within your o
 
 - **HTML and JSON Logging**
   - Logs scan and attack results in both JSON (`/home/pi/xeno/utils/json_logs`) and HTML (`/home/pi/xeno/utils/html_logs`) formats for detailed review.
+  - Hosts flask server to allow users to see their logs without having to download them from the pi itself, uses IP:8080
 
 - **Dynamic E-Paper Display Updates**
   - Displays workflow progress and stats on an e-paper display using custom images (`/home/pi/xeno/images`).
