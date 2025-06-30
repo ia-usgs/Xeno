@@ -69,7 +69,69 @@ The purpose of this tool is to teach you what weaknesses there are within your o
 
 ---
 
-## **Installation**
+# **Installation**
+
+## Using the Community Image
+
+If you are using the official **Xeno Community Image** (pre-installed with everything), most components are already configured — including the default pet name: `"Xeno"`.
+
+### What’s Already Set Up
+
+- All Python dependencies, tools, and services.
+- `state.json` initialized with default values.
+- e-Paper display drivers installed.
+- Systemd service for Xeno is enabled.
+
+---
+
+### Changing the Pet Name (Optional)
+
+To personalize your Xeno’s identity:
+
+1. Open the state file:
+   ```bash
+   sudo nano /home/pi/xeno/state.json
+   ```
+
+2. Locate the line:
+   ```json
+   "pet_name": "Xeno"
+   ```
+
+3. Change `"Xeno"` to your preferred name:
+   ```json
+   "pet_name": "CyberDog"
+   ```
+
+4. Save and exit:
+   - Press `CTRL + X`
+   - Then press `Y`
+   - Then press `Enter`
+
+---
+
+### Recommended Next Steps
+
+After booting for the first time:
+
+- **Connect to Wi-Fi**:
+  Edit your networks in `/home/pi/xeno/config/wifi_credentials.json`.
+
+- **Customize Password Lists**:
+  Add your own to `/home/pi/xeno/config/password_list.txt`.
+
+- **Start Xeno Manually (only if you stopped the xeno service)** (optional):
+  ```bash
+  sudo python3 /home/pi/xeno/main.py
+  ```
+
+- **Or View Logs**:
+  ```bash
+  sudo journalctl -u xeno.service -f
+  ```
+
+---
+
 
 ### **Automatic Installation (Recommended)**
 
@@ -279,6 +341,39 @@ To run the script continuously on system startup:
 - Modify workflows in `main.py`.
 
 ---
+## **HTML Log Interface Overview**
+
+The latest update introduces a visually enhanced **HTML Logging Interface**, designed to make reviewing scan results clearer, and more intuitive.
+
+### **Scan Summary Panel**
+![Device Summary Table](https://github.com/user-attachments/assets/e1a7bdc2-90b3-43da-a120-577c757d5ed5)
+
+Lists all devices discovered during each scan.
+
+**Details displayed:**
+- IP Address  
+- MAC Address  
+- Vendor/Manufacturer  
+
+Use this panel to quickly identify devices on the network and verify expected vs. unexpected clients.
+
+### **Vulnerability Details Table**
+![Vulnerability Table](https://github.com/user-attachments/assets/4b5b080b-d0f4-4b6f-a2c0-b3583ab00f8c)
+
+Outlines vulnerabilities detected during each scan.
+
+**Each row includes:**
+- Target IP  
+- Port  
+- Service Name  
+- Version  
+- Matched Exploit  
+- Exploit Title  
+- Exploit Path  
+
+Use this information to assess potential risks.
+
+---
 
 ## **Debugging**
 - If you get `GPIO Busy` while running manually in CLI it is because the service is running.
@@ -296,7 +391,7 @@ This project is open for contributions! Feel free to fork the repository and sub
 
 ### **Disclaimer**
 
-This project is intended for **educational and ethical penetration testing** only. Unauthorized use on networks or devices without permission is illegal and punishable by law.
+This project is intended for **educational and ethical penetration testing** only. Unauthorized use on networks or devices is illegal and punishable by law.
 
 **Use responsibly.**
 

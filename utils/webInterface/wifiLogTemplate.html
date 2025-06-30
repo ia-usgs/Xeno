@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>XENO: Wi-Fi Scan Log for SSID: {ssid}</title>
+    <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="../webInterface/logTheme.css"/>   
+</head>
+
+<body>
+  <header>
+    <h1>XENO: Wi-Fi Scan Log for SSID: {ssid}</h1>
+  </header>
+
+  <section class="scan-summary">
+    <h2>Scan Summary</h2>
+    <h3>Discovered Devices</h3>
+    {scan_entries}
+  </section>
+
+  <section class="vulnerability-details">
+    <h2>Vulnerability Details</h2>
+    {vulnerability_entries}
+  </section>
+
+  <footer>
+    &copy; 2024 Irvin Avitia | XENO Project. Licensed under the MIT License.
+  </footer>
+</body>
+</html>
