@@ -345,6 +345,7 @@ To run the script continuously on system startup:
 ## **HTML Log Interface Overview**
 
 The latest update introduces a visually enhanced **HTML Logging Interface**, designed to make reviewing scan results clearer, and more intuitive.
+Using Flask, Xeno now creates a server that pulls from the HTML file found in the log section. Applies a theme to it and serves it at x.x.x.x:8080 (your Pi's IP)
 
 ### **Scan Summary Panel**
 ![Device Summary Table](https://github.com/user-attachments/assets/e1a7bdc2-90b3-43da-a120-577c757d5ed5)
