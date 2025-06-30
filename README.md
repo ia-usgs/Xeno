@@ -342,27 +342,39 @@ To run the script continuously on system startup:
 - Modify workflows in `main.py`.
 
 ---
-## **HTML Log Interface Overview**
+## **HTML Scan Log Overview**
 
-The latest update introduces a visually enhanced **HTML Logging Interface**, designed to make reviewing scan results clearer, and more intuitive.
-Using Flask, Xeno now creates a server that pulls from the HTML file found in the log section. Applies a theme to it and serves it at x.x.x.x:8080 (your Pi's IP)
+The latest update introduces a streamlined and visually enhanced HTML Logging Interface that simplifies the process of reviewing scan results.
 
-### **Scan Summary Panel**
+Leveraging Flask, Xeno now hosts a lightweight local server that serves your log reports through a styled HTML interface. The server reads from the log directory and applies a theme to the report, making it accessible from your Raspberry Pi at: ```http://<your-pi-ip>:8080```
+
+### **How to Launch the Server and Access Your HTML Log**
+1. Navigate to the Xeno project directory:
+<pre>cd /home/pi/xeno/</pre>
+2. Start the web server:
+<pre> sudo python3 web_server.py</pre>
+_Your terminal output should resemble the following:_   
+![Terminal Image](https://github.com/user-attachments/assets/b636aa46-c00d-4a0a-9a09-2ca7cd514145)
+
+3. While the server is running, open a web browser and visit:
+<pre>http://insert-your-pi-ip:8080</pre> 
+
+4. Click the link under **Xeno Reports** on the landing page to open your **HTML log**.
+
+### **Scan Log: Summary Panel**
+#### Lists all devices discovered during each scan
 ![Device Summary Table](https://github.com/user-attachments/assets/e1a7bdc2-90b3-43da-a120-577c757d5ed5)
-
-Lists all devices discovered during each scan.
 
 **Details displayed:**
 - IP Address  
 - MAC Address  
 - Vendor/Manufacturer  
 
-Use this panel to quickly identify devices on the network and verify expected vs. unexpected clients.
+**_Use this panel to quickly identify devices on the network and verify expected vs. unexpected clients_**
 
-### **Vulnerability Details Table**
+### **Scan Log: Vulnerability Details Table**
+#### Outlines vulnerabilities detected during each scan
 ![Vulnerability Table](https://github.com/user-attachments/assets/4b5b080b-d0f4-4b6f-a2c0-b3583ab00f8c)
-
-Outlines vulnerabilities detected during each scan.
 
 **Each row includes:**
 - Target IP  
@@ -373,8 +385,7 @@ Outlines vulnerabilities detected during each scan.
 - Exploit Title  
 - Exploit Path  
 
-Use this information to assess potential risks.
-
+**_Use this information to assess potential risks_**
 ---
 
 ## **Debugging**
