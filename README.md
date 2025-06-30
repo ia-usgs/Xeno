@@ -54,6 +54,7 @@ The purpose of this tool is to teach you what weaknesses there are within your o
 
 - **HTML and JSON Logging**
   - Logs scan and attack results in both JSON (`/home/pi/xeno/utils/json_logs`) and HTML (`/home/pi/xeno/utils/html_logs`) formats for detailed review.
+  - Hosts flask server to allow users to see their logs without having to download them from the pi itself, uses IP:8080
 
 - **Dynamic E-Paper Display Updates**
   - Displays workflow progress and stats on an e-paper display using custom images (`/home/pi/xeno/images`).
@@ -344,6 +345,7 @@ To run the script continuously on system startup:
 ## **HTML Log Interface Overview**
 
 The latest update introduces a visually enhanced **HTML Logging Interface**, designed to make reviewing scan results clearer, and more intuitive.
+Using Flask, Xeno now creates a server that pulls from the HTML file found in the log section. Applies a theme to it and serves it at x.x.x.x:8080 (your Pi's IP)
 
 ### **Scan Summary Panel**
 ![Device Summary Table](https://github.com/user-attachments/assets/e1a7bdc2-90b3-43da-a120-577c757d5ed5)
