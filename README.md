@@ -344,22 +344,17 @@ To run the script continuously on system startup:
 ---
 ## **HTML Scan Log Overview**
 
-The latest update introduces a streamlined and visually enhanced HTML Logging Interface that simplifies the process of reviewing scan results.
+The latest update introduces a streamlined and visually enhanced HTML Logging Interface, making it easier than ever to review scan results.  
 
-Leveraging Flask, Xeno now hosts a lightweight local server that serves your log reports through a styled HTML interface. The server reads from the log directory and applies a theme to the report, making it accessible from your Raspberry Pi at: ```http://<your-pi-ip>:8080```
+Xeno now automatically launches a lightweight Flask server to serve your log reports through a styled HTML interface.
 
-### **How to Launch the Server and Access Your HTML Log**
-1. Navigate to the Xeno project directory:
-<pre>cd /home/pi/xeno/</pre>
-2. Start the web server:
-<pre> sudo python3 web_server.py</pre>
-_Your terminal output should resemble the following:_   
-![Terminal Image](https://github.com/user-attachments/assets/b636aa46-c00d-4a0a-9a09-2ca7cd514145)
+_There's no manual setup required—just run Xeno, and your log viewer is ready to go._
 
-3. While the server is running, open a web browser and visit:
+### **Accessing Your HTML Log**
+1. While xeno is running, open a web browser and visit:
 <pre>http://insert-your-pi-ip:8080</pre> 
 
-4. Click the link under **Xeno Reports** on the landing page to open your **HTML log**.
+2. Click the link under **Xeno Reports** on the landing page to open your **HTML log**.
 
 ### **Scan Log: Summary Panel**
 #### Lists all devices discovered during each scan
