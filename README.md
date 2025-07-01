@@ -360,7 +360,7 @@ _No manual setup required on most models—just run Xeno, and your log viewer is
 
 4. On the landing page, click the link under **Xeno Reports** to view your **HTML log**.
 
-### **Manually Launching the Server (Raspberry Pi Zero W / Zero W 2)**
+### **Manually Launching the Server and Accessing the HTML Log (Raspberry Pi Zero W / Zero W 2)**
 Due to hardware limitations, the automatic Flask launch may not work reliably on Pi Zero models. You can start the server manually:
 
 1. Navigate to the Xeno project directory:
