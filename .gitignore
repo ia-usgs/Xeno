@@ -3,3 +3,6 @@ html_logs/
 json_logs/
 test_html_logger.py
 test_output/
+logs/test_*.log
+logs/integration_test.log
+captures/

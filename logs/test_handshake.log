@@ -1,6 +1,0 @@
-[2025-07-02 13:24:43] [INFO] [INFO] Loaded 2 Wi-Fi credentials
-[2025-07-02 13:24:43] [INFO] [INFO] Scanning for visible Wi-Fi networks
-[2025-07-02 13:24:43] [INFO] [ERROR] Failed to scan networks: sudo: nmcli: command not found
-
-[2025-07-02 13:24:43] [INFO] [INFO] Known network available: TestNetwork1
-[2025-07-02 13:24:53] [INFO] [ERROR] Exception checking internet connectivity: Command '['ping', '-c', '1', '8.8.8.8']' timed out after 10 seconds
