@@ -1,6 +1,5 @@
 import sys
 import os
-import json
 from datetime import datetime
 # Add paths for drivers and assets
 sys.path.append('/home/pi/xeno/utils/waveshare_epd')
@@ -8,6 +7,7 @@ sys.path.append('/home/pi/xeno/utils')
 import logging
 from PIL import Image, ImageDraw, ImageFont, ImageEnhance
 from waveshare_epd import epd2in13_V4
+from utils.json_manager import json_manager
 
 # Logging setup
 logging.basicConfig(level=logging.DEBUG)
@@ -57,28 +57,40 @@ class EPaperDisplay:
             Exception: If the state file cannot be read or is improperly formatted.
         """
 
-        if os.path.exists(STATE_FILE):
-            try:
-                with open(STATE_FILE, "r") as f:
-                    state = json.load(f)
-                    self.level = state.get("level", 1)
-                    self.start_date = state.get("start_date", None)
-                    self.pet_name = state.get("pet_name", "Xeno")
+        try:
+            # Create default state data
+            default_state = json_manager.create_state_json(
+                level=1, 
+                pet_name="Xeno"
+            )
+            
+            # Load state using JSON manager with schema validation
+            state = json_manager.load_json(
+                STATE_FILE, 
+                schema_type="state",
+                create_if_missing=True,
+                default_data=default_state
+            )
+            
+            self.level = state.get("level", 1)
+            self.start_date = state.get("start_date", None)
+            self.pet_name = state.get("pet_name", "Xeno")
 
-                    # Calculate age based on start_date
-                    if self.start_date:
-                        start_date_obj = datetime.strptime(self.start_date, "%Y-%m-%d")
-                        self.age = (datetime.now() - start_date_obj).days
-                    else:
-                        self.age = 0
+            # Calculate age based on start_date
+            if self.start_date:
+                start_date_obj = datetime.strptime(self.start_date, "%Y-%m-%d")
+                self.age = (datetime.now() - start_date_obj).days
+            else:
+                self.age = 0
 
-                    logging.info(f"State loaded: {state}")
-            except Exception as e:
-                logging.error(f"Error loading state file: {e}")
-        else:
-            # First run, initialize start date
+            logging.info(f"State loaded: {state}")
+        except Exception as e:
+            logging.error(f"Error loading state file: {e}")
+            # Fallback to defaults
             self.start_date = datetime.now().strftime("%Y-%m-%d")
-            logging.info("No saved state found. Initializing with current date.")
+            self.age = 0
+            self.level = 1
+            self.pet_name = "Xeno"
 
     def save_state(self):
         """
@@ -93,14 +105,23 @@ class EPaperDisplay:
         """
 
         try:
-            state = {
-                "level": self.level,
-                "start_date": self.start_date,
-                "pet_name": self.pet_name
-            }
-            with open(STATE_FILE, "w") as f:
-                json.dump(state, f)
+            state = json_manager.create_state_json(
+                level=self.level,
+                start_date=self.start_date,
+                pet_name=self.pet_name
+            )
+            
+            success = json_manager.save_json(
+                STATE_FILE, 
+                state, 
+                schema_type="state",
+                create_backup=True
+            )
+            
+            if success:
                 logging.info(f"State saved: {state}")
+            else:
+                logging.error("Failed to save state file")
         except Exception as e:
             logging.error(f"Error saving state file: {e}")
 

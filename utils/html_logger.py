@@ -1,6 +1,6 @@
 import os
-import json
 from datetime import datetime
+from utils.json_manager import json_manager
 
 
 class HTMLLogger:
@@ -12,20 +12,25 @@ class HTMLLogger:
 
     def save_scan_result_to_json(self, ssid, scan_result):
         json_file = os.path.join(self.json_dir, f"{ssid}.json")
-        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        
+        # Add new scan entry with proper structure
+        scan_entry = {
+            "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"), 
+            "result": scan_result
+        }
+        
+        success = json_manager.append_to_json_array(
+            json_file,
+            "scans",
+            scan_entry,
+            schema_type="scan_result"
+        )
 
-        if os.path.exists(json_file):
-            with open(json_file, "r") as file:
-                data = json.load(file)
+        if success:
+            print(f"[INFO] Scan result saved to JSON: {json_file}")
         else:
-            data = {"ssid": ssid, "scans": []}
-
-        data["scans"].append({"timestamp": timestamp, "result": scan_result})
-
-        with open(json_file, "w") as file:
-            json.dump(data, file, indent=4)
-
-        print(f"[INFO] Scan result saved to JSON: {json_file}")
+            print(f"[ERROR] Failed to save scan result to JSON: {json_file}")
+        
         return json_file
 
     def generate_html_from_json(self, ssid):
@@ -37,8 +42,11 @@ class HTMLLogger:
             print(f"[WARNING] No JSON file found for SSID: {ssid}. Cannot generate HTML log.")
             return
         
-        with open(json_file, "r") as file:
-            data = json.load(file)
+        try:
+            data = json_manager.load_json(json_file, schema_type="scan_result")
+        except Exception as e:
+            print(f"[ERROR] Failed to load JSON data from {json_file}: {e}")
+            return
         
         if not os.path.exists(template_file):
             print(f"[ERROR] Template file not found: {template_file}. Cannot generate HTML log.")
@@ -206,21 +214,22 @@ class HTMLLogger:
 
     def append_vulnerability_results_to_html(self, ssid, vulnerability_results):
         json_file = os.path.join(self.json_dir, f"{ssid}.json")
-        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-        if os.path.exists(json_file):
-            with open(json_file, "r") as file:
-                data = json.load(file)
-        else:
-            data = {"ssid": ssid, "scans": []}
-
-        data["scans"].append({
-            "timestamp": timestamp,
+        # Add vulnerability results entry
+        vuln_entry = {
+            "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             "vulnerability_results": vulnerability_results
-        })
+        }
+        
+        success = json_manager.append_to_json_array(
+            json_file,
+            "scans",
+            vuln_entry,
+            schema_type="scan_result"
+        )
 
-        with open(json_file, "w") as file:
-            json.dump(data, file, indent=4)
-
-        self.generate_html_from_json(ssid)
-        print(f"[INFO] Vulnerability results appended and HTML updated for SSID: {ssid}")
+        if success:
+            self.generate_html_from_json(ssid)
+            print(f"[INFO] Vulnerability results appended and HTML updated for SSID: {ssid}")
+        else:
+            print(f"[ERROR] Failed to append vulnerability results for SSID: {ssid}")

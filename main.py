@@ -13,6 +13,7 @@ from attacks.exploit_tester import ExploitTester
 from attacks.file_stealer import FileStealer
 from utils.display import EPaperDisplay
 from utils.image_state_manager import ImageStateManager
+from utils.json_manager import json_manager
 import subprocess
 
 def load_ssh_credentials():
@@ -75,16 +76,18 @@ def load_wifi_credentials():
         "/home/pi/xeno/config/wifi_credentials.json",
         "/root/wifi_credentials.json"
     ]
+    
     for path in potential_paths:
         if os.path.exists(path):
             print(f"[INFO] Found Wi-Fi credentials at: {path}")
             try:
-                import json
-                with open(path, "r") as file:
-                    return json.load(file)
+                # Use JSON manager to load with schema validation
+                credentials = json_manager.load_json(path, schema_type="wifi_credentials")
+                return credentials
             except Exception as e:
                 print(f"[ERROR] Failed to load Wi-Fi credentials from {path}: {e}")
                 return []
+    
     print("[ERROR] No Wi-Fi credentials file found in config or root.")
     return []
 

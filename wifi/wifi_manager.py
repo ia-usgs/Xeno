@@ -1,8 +1,8 @@
 import subprocess
 import time
-import json
 from pathlib import Path
 from utils.logger import Logger
+from utils.json_manager import json_manager
 
 
 class WiFiManager:
@@ -147,20 +147,22 @@ class WiFiManager:
 
         Raises:
             FileNotFoundError: If the credentials file is not found.
-            json.JSONDecodeError: If the credentials file contains invalid JSON.
+            ValueError: If the credentials file contains invalid JSON or schema validation fails.
         """
 
         credentials_file = Path("config/wifi_credentials.json")
         try:
-            with open(credentials_file, "r") as file:
-                credentials = json.load(file)
-                self.logger.log(f"[INFO] Loaded Wi-Fi credentials from {credentials_file}.")
-                return credentials
+            credentials = json_manager.load_json(
+                credentials_file, 
+                schema_type="wifi_credentials"
+            )
+            self.logger.log(f"[INFO] Loaded Wi-Fi credentials from {credentials_file}.")
+            return credentials
         except FileNotFoundError:
             self.logger.log(f"[ERROR] Wi-Fi credentials file not found at {credentials_file}.")
             return []
-        except json.JSONDecodeError as e:
-            self.logger.log(f"[ERROR] Error decoding Wi-Fi credentials JSON: {e}")
+        except Exception as e:
+            self.logger.log(f"[ERROR] Error loading Wi-Fi credentials: {e}")
             return []
 
     def handle_network_transition(self, ssid, password):
