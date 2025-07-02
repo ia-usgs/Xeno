@@ -196,7 +196,7 @@ class EPaperDisplay:
             logging.error(f"Missing key in stats: {e}")
             raise
 
-    def draw_layout(self, image, current_ssid="Not Connected", current_status="Initializing...", stats=None):
+    def draw_layout(self, image, current_ssid="Not Connected", current_status="Initializing...", stats=None, device_ip=None):
             """
             Draw a custom layout for the e-paper display.
 
@@ -209,6 +209,7 @@ class EPaperDisplay:
                     - vulns (int): Number of vulnerabilities identified (default: 0).
                     - exploits (int): Number of exploits executed (default: 0).
                     - files (int): Number of files successfully stolen (default: 0).
+                device_ip (str, optional): The device's own IP address to display. Defaults to None.
 
             Returns:
                 PIL.Image: The final layout image with all elements rendered.
@@ -262,12 +263,21 @@ class EPaperDisplay:
                 font_body = ImageFont.truetype('/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf', 8)
                 draw.text(xy=(35, 100), text=f"{self.pet_name}", font=font_body, fill=0)
                 
-                # Age and Level
-                draw.text(xy=(5, 110), text=f"Age: {self.age} days", font=font_body, fill=0)
-                draw.text(xy=(75, 110), text=f"Level: {self.level}", font=font_body, fill=0)
+                # Device IP (if available)
+                if device_ip:
+                    draw.text(xy=(25, 110), text=f"IP: {device_ip}", font=font_body, fill=0)
+                    # Age and Level (moved down to accommodate IP)
+                    draw.text(xy=(5, 120), text=f"Age: {self.age} days", font=font_body, fill=0)
+                    draw.text(xy=(75, 120), text=f"Level: {self.level}", font=font_body, fill=0)
+                    # Move Xeno image down slightly
+                    canvas.paste(image, (17, 160))  # Paste the dynamic Xeno image
+                else:
+                    # Age and Level (original position when no IP)
+                    draw.text(xy=(5, 110), text=f"Age: {self.age} days", font=font_body, fill=0)
+                    draw.text(xy=(75, 110), text=f"Level: {self.level}", font=font_body, fill=0)
+                    # Bottom Section: Xeno Image (original position)
+                    canvas.paste(image, (17, 150))  # Paste the dynamic Xeno image
 
-                # Bottom Section: Xeno Image
-                canvas.paste(image, (17, 150))  # Paste the dynamic Xeno image
                 logging.info("Dynamic layout drawn successfully.")
 
                 # Save the updated state

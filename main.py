@@ -155,7 +155,11 @@ def initialize_display_template(display, current_ssid="Not Connected", stats=Non
         from PIL import Image
         placeholder_image = Image.new('1', (60, 60), color=255)  # Blank image
         prepared_image = display.prepare_image(placeholder_image)
-        layout = display.draw_layout(prepared_image, current_ssid=current_ssid, current_status="Initializing...", stats=stats)
+        
+        # Get device IP for display
+        device_ip = get_own_ip_address()
+        
+        layout = display.draw_layout(prepared_image, current_ssid=current_ssid, current_status="Initializing...", stats=stats, device_ip=device_ip)
         display.display_image(layout, use_partial_update=False)  # Full refresh for initialization
         print("[INFO] Template initialized.")
     except Exception as e:
@@ -202,9 +206,12 @@ def update_display_state(self, state_manager, state, current_ssid="SSID",
         # Combine the current status with the Xenomorph message
         full_status = f"{current_status}\n{xeno_message}"
 
+        # Get device IP for display
+        device_ip = get_own_ip_address()
+
         # Render layout and update display
         layout = self.draw_layout(prepared_image, current_ssid=current_ssid,
-                                  current_status=full_status, stats=stats)
+                                  current_status=full_status, stats=stats, device_ip=device_ip)
         self.display_image(layout, use_partial_update=use_partial_update)
 
         # Log success
