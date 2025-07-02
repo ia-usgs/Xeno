@@ -346,15 +346,35 @@ To run the script continuously on system startup:
 
 The latest update introduces a streamlined and visually enhanced HTML Logging Interface, making it easier than ever to review scan results.  
 
-Xeno now automatically launches a lightweight Flask server to serve your log reports through a styled HTML interface.
+Xeno now automatically launches a lightweight Flask server to serve your log reports through a styled HTML interface
 
-_There's no manual setup required—just run Xeno, and your log viewer is ready to go._
+_No manual setup required on most models—just run Xeno, and your log viewer is ready to go!_
 
-### **Accessing Your HTML Log**
-1. While xeno is running, open a web browser and visit:
+### **Accessing the HTML Log (Raspberry Pi 3B+ and Newer)**
+1. Ensure Xeno is running:
+
+2. Open a web browser on your PC or mobile device.
+
+3. Visit:
+    <pre>http://insert-your-pi-ip:8080</pre>   
+
+4. On the landing page, click the link under **Xeno Reports** to view your **HTML log**.
+
+### **Manually Launching the Server and Accessing the HTML Log (Raspberry Pi Zero W / Zero W 2)**
+Due to hardware limitations, the automatic Flask launch may not work reliably on Pi Zero models. You can start the server manually:
+
+1. Navigate to the Xeno project directory:
+<pre>cd /home/pi/xeno/</pre>
+
+2. Start the Flask web server:
+<pre> sudo python3 web_server.py</pre>
+_Your terminal output should resemble the following:_   
+![Terminal Image](https://github.com/user-attachments/assets/b636aa46-c00d-4a0a-9a09-2ca7cd514145)
+
+3. While the server is running, open a web browser and visit:
 <pre>http://insert-your-pi-ip:8080</pre> 
 
-2. Click the link under **Xeno Reports** on the landing page to open your **HTML log**.
+4. Click the link under **Xeno Reports** on the landing page to open your **HTML log**.
 
 ### **Scan Log: Summary Panel**
 #### Lists all devices discovered during each scan
