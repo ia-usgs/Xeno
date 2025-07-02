@@ -14,6 +14,48 @@ from attacks.file_stealer import FileStealer
 from utils.display import EPaperDisplay
 from utils.image_state_manager import ImageStateManager
 import subprocess
+import socket
+
+def get_own_ip_address():
+    """
+    Get the device's own IP address using multiple methods.
+    
+    Returns:
+        str or None: The device's own IP address if successful, None otherwise.
+    """
+    try:
+        # Method 1: Try to get IP from network interface
+        import subprocess
+        result = subprocess.run(['hostname', '-I'], capture_output=True, text=True)
+        if result.returncode == 0:
+            ips = result.stdout.strip().split()
+            # Filter out loopback and get first valid IP
+            for ip in ips:
+                if ip != '127.0.0.1' and not ip.startswith('169.254'):
+                    return ip
+        
+        # Method 2: Socket method (fallback)
+        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
+            s.connect(("8.8.8.8", 80))
+            local_ip = s.getsockname()[0]
+            if local_ip != '127.0.0.1':
+                return local_ip
+                
+        # Method 3: Try to get from ip command
+        result = subprocess.run(['ip', 'route', 'get', '8.8.8.8'], capture_output=True, text=True)
+        if result.returncode == 0:
+            # Parse output to find src IP
+            lines = result.stdout.strip().split('\n')
+            for line in lines:
+                if 'src' in line:
+                    parts = line.split()
+                    for i, part in enumerate(parts):
+                        if part == 'src' and i + 1 < len(parts):
+                            return parts[i + 1]
+                            
+    except Exception:
+        pass
+    return None
 
 def load_ssh_credentials():
     """
@@ -264,6 +306,20 @@ def run_scans(logger, wifi_manager, html_logger, display, state_manager):
             use_partial_update=True
         )
         scan_result = run_nmap_scan("192.168.1.0/24", logger=logger)
+        
+        # Get own IP address and create whitelist
+        own_ip = get_own_ip_address()
+        if own_ip:
+            logger.log(f"[INFO] Device's own IP address: {own_ip} - adding to whitelist")
+            # Filter out own IP from discovered IPs to prevent self-attack
+            original_count = len(scan_result["discovered_ips"])
+            scan_result["discovered_ips"] = [ip for ip in scan_result["discovered_ips"] if ip != own_ip]
+            filtered_count = len(scan_result["discovered_ips"])
+            if original_count > filtered_count:
+                logger.log(f"[INFO] Filtered out own IP {own_ip} from attack targets. Targets: {original_count} -> {filtered_count}")
+        else:
+            logger.log("[WARNING] Could not determine own IP address - proceeding without self-protection")
+            
         stats["targets"] += len(scan_result["discovered_ips"])  # Increment Targets
         html_logger.save_scan_result_to_json(ssid, scan_result["raw_output"])
 
