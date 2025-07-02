@@ -15,6 +15,36 @@ from utils.display import EPaperDisplay
 from utils.image_state_manager import ImageStateManager
 import subprocess
 
+def get_own_ip():
+    """
+    Detect and return the Raspberry Pi's active IP address.
+    
+    Uses 'ip route get 1.1.1.1' to determine the IP address used for outbound connections.
+    This method is reliable even when MAC addresses change between Wi-Fi sessions.
+    
+    Returns:
+        str or None: The Pi's current IP address if successfully detected, otherwise None.
+    
+    Raises:
+        Exception: If the command fails or output cannot be parsed.
+    """
+    try:
+        result = subprocess.run(["ip", "route", "get", "1.1.1.1"], 
+                              stdout=subprocess.PIPE, 
+                              stderr=subprocess.PIPE, 
+                              text=True)
+        if result.returncode == 0:
+            # Parse output to extract source IP
+            # Expected format: "1.1.1.1 via 192.168.1.1 dev wlan0 src 192.168.1.100 ..."
+            output = result.stdout.strip()
+            if "src" in output:
+                own_ip = output.split("src")[-1].split()[0].strip()
+                return own_ip
+        return None
+    except Exception as e:
+        print(f"[ERROR] Failed to detect own IP address: {e}")
+        return None
+
 def load_ssh_credentials():
     """
     Load SSH credentials from predefined paths in the project directory.
@@ -266,6 +296,17 @@ def run_scans(logger, wifi_manager, html_logger, display, state_manager):
         scan_result = run_nmap_scan("192.168.1.0/24", logger=logger)
         stats["targets"] += len(scan_result["discovered_ips"])  # Increment Targets
         html_logger.save_scan_result_to_json(ssid, scan_result["raw_output"])
+
+        # Detect and filter out own IP address to prevent self-targeting
+        own_ip = get_own_ip()
+        if own_ip:
+            logger.log(f"[INFO] Detected own IP address: {own_ip}")
+            if own_ip in scan_result["discovered_ips"]:
+                scan_result["discovered_ips"].remove(own_ip)
+                logger.log(f"[INFO] Removed own IP {own_ip} from target list (skipped: self)")
+                stats["targets"] -= 1  # Adjust target count since we removed one
+        else:
+            logger.log("[WARNING] Could not detect own IP address - proceeding with all discovered IPs")
 
         # Recon Phase
         recon = Recon(logger=logger)
