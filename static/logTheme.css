@@ -10,12 +10,32 @@ header {
     padding: 1.5rem;
     border-bottom: 2px solid #22d3ee;
     text-align: center;
+    position: relative;
 }
 header h1 {
     font-size: 2rem;
     margin: 0;
     color: #22d3ee;
     text-shadow: 0 0 5px #22d3ee;
+}
+.xeno-output-btn {
+    position: absolute;
+    top: 1.5rem;
+    right: 1.5rem;
+    background-color: #22d3ee;
+    color: #0a0f1c;
+    padding: 0.5rem 1rem;
+    border-radius: 4px;
+    text-decoration: none;
+    font-weight: bold;
+    font-size: 0.9rem;
+    transition: all 0.3s ease;
+    box-shadow: 0 0 5px rgba(34, 211, 238, 0.3);
+}
+.xeno-output-btn:hover {
+    background-color: #7dd3fc;
+    box-shadow: 0 0 10px rgba(34, 211, 238, 0.5);
+    transform: translateY(-1px);
 }
 section {
     margin: 2rem 0;

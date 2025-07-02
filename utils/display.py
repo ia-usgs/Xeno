@@ -297,6 +297,14 @@ class EPaperDisplay:
             else:
                 logging.debug("Using full refresh...")
                 self.epd.display(buffer)  # Call the full refresh method
+            
+            # Save the current display image for web interface
+            try:
+                canvas.save("latest_display.png")
+                logging.debug("Display image saved as latest_display.png for web interface.")
+            except Exception as save_error:
+                logging.warning(f"Failed to save display image for web interface: {save_error}")
+                
         except Exception as e:
             logging.error(f"Failed to display image: {e}")
             raise
