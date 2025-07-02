@@ -118,7 +118,7 @@ def load_wifi_credentials():
     print("[ERROR] No Wi-Fi credentials file found in config or root.")
     return []
 
-def initialize_display_template(display, current_ssid="Not Connected", stats=None):
+def initialize_display_template(display, current_ssid="Not Connected", stats=None, own_ip=None):
     """
     Initialize the e-paper display with a basic template.
 
@@ -126,6 +126,7 @@ def initialize_display_template(display, current_ssid="Not Connected", stats=Non
         display (EPaperDisplay): The e-paper display object to update.
         current_ssid (str): The name of the current Wi-Fi network (default: "Not Connected").
         stats (dict): A dictionary with stats on targets, vulnerabilities, exploits, and files.
+        own_ip (str): The Pi's current IP address (default: None).
 
     Default Stats:
         - targets: 0
@@ -143,14 +144,14 @@ def initialize_display_template(display, current_ssid="Not Connected", stats=Non
         from PIL import Image
         placeholder_image = Image.new('1', (60, 60), color=255)  # Blank image
         prepared_image = display.prepare_image(placeholder_image)
-        layout = display.draw_layout(prepared_image, current_ssid=current_ssid, current_status="Initializing...", stats=stats)
+        layout = display.draw_layout(prepared_image, current_ssid=current_ssid, current_status="Initializing...", stats=stats, own_ip=own_ip)
         display.display_image(layout, use_partial_update=False)  # Full refresh for initialization
         print("[INFO] Template initialized.")
     except Exception as e:
         print(f"[ERROR] Failed to initialize display template: {e}")
 
 def update_display_state(self, state_manager, state, current_ssid="SSID",
-                         current_status="", stats=None, use_partial_update=True):
+                         current_status="", stats=None, own_ip=None, use_partial_update=True):
     """
     Update the e-paper display with the current workflow state.
 
@@ -161,6 +162,7 @@ def update_display_state(self, state_manager, state, current_ssid="SSID",
         current_ssid (str): The name of the current Wi-Fi network.
         current_status (str): The current status message to display.
         stats (dict): A dictionary with stats on targets, vulnerabilities, exploits, and files.
+        own_ip (str): The Pi's current IP address.
         use_partial_update (bool): Whether to perform a partial refresh (default: True).
 
     Raises:
@@ -192,7 +194,7 @@ def update_display_state(self, state_manager, state, current_ssid="SSID",
 
         # Render layout and update display
         layout = self.draw_layout(prepared_image, current_ssid=current_ssid,
-                                  current_status=full_status, stats=stats)
+                                  current_status=full_status, stats=stats, own_ip=own_ip)
         self.display_image(layout, use_partial_update=use_partial_update)
 
         # Log success
@@ -226,7 +228,7 @@ def run_scans(logger, wifi_manager, html_logger, display, state_manager):
     stats = {"targets": 0, "vulns": 0, "exploits": 0, "files": 0}  # Initialize stats
 
     # Full refresh for the initial template
-    initialize_display_template(display, current_ssid="Not Connected", stats=stats)
+    initialize_display_template(display, current_ssid="Not Connected", stats=stats, own_ip=None)
 
     wifi_credentials = load_wifi_credentials()
     if not wifi_credentials:
@@ -239,6 +241,7 @@ def run_scans(logger, wifi_manager, html_logger, display, state_manager):
         return
 
     connected_ssid = None  # Track the currently connected SSID
+    current_ip = None  # Track the current IP address
 
     for network in wifi_credentials:
         ssid = network.get("SSID")
@@ -262,12 +265,17 @@ def run_scans(logger, wifi_manager, html_logger, display, state_manager):
                     current_ssid=ssid,
                     current_status="Connecting to Wi-Fi",
                     stats=stats,
+                    own_ip=current_ip,
                     use_partial_update=True
                 )
                 logger.log(f"[INFO] Attempting to connect to SSID: {ssid} (Attempt {attempt + 1}/3)")
                 if wifi_manager.connect_to_wifi(ssid, password):
                     logger.log(f"[SUCCESS] Connected to SSID: {ssid}")
                     connected_ssid = ssid
+                    # Get IP address after successful connection
+                    current_ip = get_own_ip()
+                    if current_ip:
+                        logger.log(f"[INFO] Current IP address: {current_ip}")
                     break
             else:
                 logger.log(f"[WARNING] Failed to connect to SSID: {ssid}.")
@@ -278,6 +286,7 @@ def run_scans(logger, wifi_manager, html_logger, display, state_manager):
                     current_ssid=ssid,
                     current_status="Connection failed. Retrying next...",
                     stats=stats,
+                    own_ip=current_ip,
                     use_partial_update=True
                 )
                 continue
@@ -291,6 +300,7 @@ def run_scans(logger, wifi_manager, html_logger, display, state_manager):
             current_ssid=ssid,
             current_status="Scanning the network",
             stats=stats,
+            own_ip=current_ip,
             use_partial_update=True
         )
         scan_result = run_nmap_scan("192.168.1.0/24", logger=logger)
@@ -320,6 +330,7 @@ def run_scans(logger, wifi_manager, html_logger, display, state_manager):
                 current_ssid=ssid,
                 current_status=f"Scanning IP {ip}",
                 stats=stats,
+                own_ip=current_ip,
                 use_partial_update=True
             )
 
@@ -367,6 +378,7 @@ def run_scans(logger, wifi_manager, html_logger, display, state_manager):
                 current_ssid=ssid,
                 current_status="Running vulnerability scan",
                 stats=stats,
+                own_ip=current_ip,
                 use_partial_update=True
             )
             vuln_results = vuln_scanner.run_scan(ip, ssid=ssid, html_logger=html_logger)
@@ -386,6 +398,7 @@ def run_scans(logger, wifi_manager, html_logger, display, state_manager):
                     current_ssid=ssid,
                     current_status="Running exploit tests",
                     stats=stats,
+                    own_ip=current_ip,
                     use_partial_update=True
                 )
                 exploit_tester.run_exploit_testing(
@@ -401,6 +414,7 @@ def run_scans(logger, wifi_manager, html_logger, display, state_manager):
                     current_ssid=ssid,
                     current_status="Validating exploit results...",
                     stats=stats,
+                    own_ip=current_ip,
                     use_partial_update=True
                 )
                 stats["exploits"] += 1
@@ -415,6 +429,7 @@ def run_scans(logger, wifi_manager, html_logger, display, state_manager):
                 current_ssid=ssid,
                 current_status="Stealing files",
                 stats=stats,
+                own_ip=current_ip,
                 use_partial_update=True
             )
             successful = False
@@ -434,6 +449,7 @@ def run_scans(logger, wifi_manager, html_logger, display, state_manager):
                 logger.log(f"[SUCCESS] File stealing successful for IP: {ip}")
                 wifi_manager.disconnect_wifi()
                 connected_ssid = None  # Reset connected SSID after disconnecting
+                current_ip = None  # Reset IP address after disconnecting
                 change_mac_address(logger)
 
     # Full refresh after workflow completion
@@ -444,6 +460,7 @@ def run_scans(logger, wifi_manager, html_logger, display, state_manager):
         current_ssid="Completed Network",
         current_status="Workflow Complete",
         stats=stats,
+        own_ip=current_ip,
         use_partial_update=False  # Full refresh to clear any ghosting
     )
 

@@ -196,7 +196,7 @@ class EPaperDisplay:
             logging.error(f"Missing key in stats: {e}")
             raise
 
-    def draw_layout(self, image, current_ssid="Not Connected", current_status="Initializing...", stats=None):
+    def draw_layout(self, image, current_ssid="Not Connected", current_status="Initializing...", stats=None, own_ip=None):
             """
             Draw a custom layout for the e-paper display.
 
@@ -209,6 +209,7 @@ class EPaperDisplay:
                     - vulns (int): Number of vulnerabilities identified (default: 0).
                     - exploits (int): Number of exploits executed (default: 0).
                     - files (int): Number of files successfully stolen (default: 0).
+                own_ip (str, optional): The Pi's current IP address. Defaults to None.
 
             Returns:
                 PIL.Image: The final layout image with all elements rendered.
@@ -240,6 +241,10 @@ class EPaperDisplay:
                 draw.rectangle((0, 0, self.width, 20), fill=0)  # Black background
                 font_small = ImageFont.truetype('/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf', 8)
                 draw.text(xy=(5, 2), text=f"SSID: {current_ssid}", font=font_small, fill=255)  # White text for SSID
+                
+                # IP address display (right side of top bar if available)
+                if own_ip:
+                    draw.text(xy=(5, 10), text=f"IP: {own_ip}", font=font_small, fill=255)  # White text for IP
 
                 # Section separators
                 draw.line((0, 20, self.width, 20), fill=0, width=1)
