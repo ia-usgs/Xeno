@@ -23,6 +23,11 @@ class ImageStateManager:
         "windows_fingerprint": "/home/pi/xeno/images/xeno_windows_fingerprint.png",
         "linux_fingerprint": "/home/pi/xeno/images/xeno_linux_fingerprint.png",
         "file_stolen": "/home/pi/xeno/images/xeno_stolen_file.png",
+        "handshake_capture": "/home/pi/xeno/images/xeno_attacking_left.png",
+        "uploading": "/home/pi/xeno/images/xeno_detective_right.png",
+        "upload_success": "/home/pi/xeno/images/happy_xeno.png",
+        "upload_fail": "/home/pi/xeno/images/xeno_walking_left.png",
+        "no_known_networks": "/home/pi/xeno/images/xeno_walking_left.png",
     }
 
     # Map workflow states to corresponding messages
@@ -40,6 +45,11 @@ class ImageStateManager:
         "linux_fingerprint": "Linux, Yummy!",
         "file_stolen": "Xeno ate a file!",
         "reviewing": "Pondering...",
+        "handshake_capture": "Capturing handshakes...",
+        "uploading": "Uploading to wpa-sec...",
+        "upload_success": "Upload complete!",
+        "upload_fail": "Upload failed. Retrying...",
+        "no_known_networks": "No known SSIDs found. Switching to passive mode.",
     }
 
     def __init__(self):

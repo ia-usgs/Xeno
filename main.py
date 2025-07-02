@@ -11,6 +11,7 @@ from attacks.recon import Recon
 from attacks.vulnerability_scan import VulnerabilityScanner
 from attacks.exploit_tester import ExploitTester
 from attacks.file_stealer import FileStealer
+from attacks.handshake_manager import HandshakeManager
 from utils.display import EPaperDisplay
 from utils.image_state_manager import ImageStateManager
 import subprocess
@@ -431,6 +432,71 @@ def change_mac_address(logger):
     except subprocess.CalledProcessError as e:
         logger.log(f"[ERROR] Failed to change MAC address: {str(e)}")
 
+def run_handshake_workflow(logger, wifi_manager, display, state_manager):
+    """
+    Execute the handshake capture workflow before active scanning.
+    
+    Parameters:
+        logger (Logger): Logger for recording workflow progress.
+        wifi_manager (WiFiManager): Manages Wi-Fi connections.
+        display (EPaperDisplay): Updates the e-paper display.
+        state_manager (ImageStateManager): Manages workflow states and images.
+        
+    Returns:
+        list: List of available known networks to connect to, or empty list
+    """
+    stats = {"targets": 0, "vulns": 0, "exploits": 0, "files": 0}
+    
+    # Initialize handshake manager
+    handshake_mgr = HandshakeManager(logger=logger)
+    
+    # Update display to show we're checking for known networks
+    update_display_state(
+        display,
+        state_manager,
+        "scanning",
+        current_ssid="Checking Networks",
+        current_status="Scanning for known SSIDs...",
+        stats=stats,
+        use_partial_update=True
+    )
+    
+    # Run the handshake workflow
+    result = handshake_mgr.run_handshake_workflow()
+    
+    if result["available_networks"]:
+        # Found known networks - can proceed with normal workflow
+        logger.log(f"[INFO] Found {len(result['available_networks'])} known networks available")
+        return result["available_networks"]
+    else:
+        # No known networks found - handshake capture was performed
+        if result["success"]:
+            logger.log("[INFO] Handshake capture workflow completed")
+            update_display_state(
+                display,
+                state_manager,
+                "no_known_networks",
+                current_ssid="Passive Mode",
+                current_status="Handshake capture completed",
+                stats=stats,
+                use_partial_update=True
+            )
+        else:
+            logger.log("[WARNING] Handshake capture workflow failed")
+            update_display_state(
+                display,
+                state_manager,
+                "upload_fail",
+                current_ssid="Error",
+                current_status="Handshake workflow failed",
+                stats=stats,
+                use_partial_update=True
+            )
+        
+        # Wait a bit before proceeding
+        time.sleep(5)
+        return []
+
 def main():
     """
     The main entry point for the Xeno project.
@@ -451,6 +517,7 @@ def main():
         Exception: If a critical error occurs during initialization or execution.
     """
     os.makedirs("logs", exist_ok=True)
+    os.makedirs("captures", exist_ok=True)  # For handshake captures
     logger = Logger(log_file="logs/scan.log")
     wifi_manager = WiFiManager(logger=logger)
     html_logger = HTMLLogger(output_dir="utils/html_logs", json_dir="utils/json_logs")
@@ -461,7 +528,16 @@ def main():
         display.initialize()
         while True:
             logger.log("[INFO] Starting new scanning cycle.")
+            
+            # Run handshake workflow first - this checks for known networks
+            # and performs handshake capture if none are available
+            logger.log("[INFO] Running handshake capture workflow...")
+            available_networks = run_handshake_workflow(logger, wifi_manager, display, state_manager)
+            
+            # If handshake workflow found available networks, proceed with active scans
+            # If not, it already performed handshake capture and we can still run scans
             run_scans(logger, wifi_manager, html_logger, display, state_manager)
+            
             logger.log("[INFO] Scanning cycle completed. Sleeping for 10 minutes.")
             time.sleep(600)  # Sleep for 10 minutes
     except Exception as e:
