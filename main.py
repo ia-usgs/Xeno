@@ -14,6 +14,7 @@ from attacks.file_stealer import FileStealer
 from utils.display import EPaperDisplay
 from utils.image_state_manager import ImageStateManager
 import subprocess
+import socket
 
 def load_ssh_credentials():
     """
@@ -264,8 +265,29 @@ def run_scans(logger, wifi_manager, html_logger, display, state_manager):
             use_partial_update=True
         )
         scan_result = run_nmap_scan("192.168.1.0/24", logger=logger)
-        stats["targets"] += len(scan_result["discovered_ips"])  # Increment Targets
-        html_logger.save_scan_result_to_json(ssid, scan_result["raw_output"])
+
+        # This is to stop xeno attacking itself
+        local_ip = None
+        try:
+            # grab the IP assigned to our wireless interface
+            out = subprocess.run(
+                ["ip", "addr", "show", wifi_manager.interface],
+                stdout=subprocess.PIPE, text=True, check=True
+            ).stdout
+            for line in out.splitlines():
+                line = line.strip()
+                if line.startswith("inet "):
+                    # format is "inet 192.168.X.Y/24"
+                    local_ip = line.split()[1].split("/")[0]
+                    break
+        except Exception as e:
+            logger.log(f"[WARNING] Could not determine {wifi_manager.interface} IP: {e}")
+
+        if local_ip:
+            scan_result["discovered_ips"] = [
+                ip for ip in scan_result["discovered_ips"] if ip != local_ip
+            ]
+            logger.log(f"[INFO] Excluding our own {wifi_manager.interface} IP ({local_ip}) from scan targets.")
 
         # Recon Phase
         recon = Recon(logger=logger)
