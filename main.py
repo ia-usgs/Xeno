@@ -45,6 +45,74 @@ def get_own_ip():
         print(f"[ERROR] Failed to detect own IP address: {e}")
         return None
 
+def get_all_own_ips():
+    """
+    Detect all IP addresses associated with this device.
+    
+    Returns both the primary outbound IP and all local interface IPs.
+    Also includes hostname-based detection.
+    
+    Returns:
+        set: A set of IP addresses associated with this device.
+    """
+    own_ips = set()
+    
+    # Method 1: Primary outbound IP
+    primary_ip = get_own_ip()
+    if primary_ip:
+        own_ips.add(primary_ip)
+    
+    # Method 2: All interface IPs
+    try:
+        result = subprocess.run(["hostname", "-I"], 
+                              stdout=subprocess.PIPE, 
+                              stderr=subprocess.PIPE, 
+                              text=True)
+        if result.returncode == 0:
+            interface_ips = result.stdout.strip().split()
+            for ip in interface_ips:
+                if ip and ip != '127.0.0.1':  # Exclude localhost
+                    own_ips.add(ip.strip())
+    except Exception as e:
+        print(f"[WARNING] Failed to get interface IPs: {e}")
+    
+    # Method 3: Hostname resolution
+    try:
+        import socket
+        hostname = socket.gethostname()
+        hostname_ip = socket.gethostbyname(hostname)
+        if hostname_ip and hostname_ip != '127.0.0.1':
+            own_ips.add(hostname_ip)
+    except Exception as e:
+        print(f"[WARNING] Failed to resolve hostname IP: {e}")
+    
+    return own_ips
+
+def get_network_from_ip(ip_address):
+    """
+    Generate network CIDR notation from an IP address.
+    
+    Assumes /24 subnet for typical home networks.
+    
+    Parameters:
+        ip_address (str): The IP address to derive network from.
+    
+    Returns:
+        str: Network in CIDR notation (e.g., "192.168.1.0/24").
+    """
+    try:
+        # Split IP into octets
+        octets = ip_address.split('.')
+        if len(octets) == 4:
+            # For /24 network, set last octet to 0
+            network = f"{octets[0]}.{octets[1]}.{octets[2]}.0/24"
+            return network
+    except Exception as e:
+        print(f"[ERROR] Failed to derive network from IP {ip_address}: {e}")
+    
+    # Fallback to common home network
+    return "192.168.1.0/24"
+
 def load_ssh_credentials():
     """
     Load SSH credentials from predefined paths in the project directory.
@@ -291,7 +359,7 @@ def run_scans(logger, wifi_manager, html_logger, display, state_manager):
                 )
                 continue
 
-        # Run Nmap scan
+        # Run Nmap scan with dynamic network detection
         logger.log(f"[INFO] Running nmap scan for network: {ssid}")
         update_display_state(
             display,
@@ -303,20 +371,60 @@ def run_scans(logger, wifi_manager, html_logger, display, state_manager):
             own_ip=current_ip,
             use_partial_update=True
         )
-        scan_result = run_nmap_scan("192.168.1.0/24", logger=logger)
+        
+        # Determine network to scan based on current IP
+        target_network = "192.168.1.0/24"  # Default fallback
+        if current_ip:
+            target_network = get_network_from_ip(current_ip)
+            logger.log(f"[INFO] Derived target network: {target_network} from IP: {current_ip}")
+        else:
+            logger.log(f"[WARNING] Using fallback network: {target_network}")
+        
+        scan_result = run_nmap_scan(target_network, logger=logger)
         stats["targets"] += len(scan_result["discovered_ips"])  # Increment Targets
         html_logger.save_scan_result_to_json(ssid, scan_result["raw_output"])
 
-        # Detect and filter out own IP address to prevent self-targeting
-        own_ip = get_own_ip()
-        if own_ip:
-            logger.log(f"[INFO] Detected own IP address: {own_ip}")
-            if own_ip in scan_result["discovered_ips"]:
-                scan_result["discovered_ips"].remove(own_ip)
-                logger.log(f"[INFO] Removed own IP {own_ip} from target list (skipped: self)")
-                stats["targets"] -= 1  # Adjust target count since we removed one
-        else:
-            logger.log("[WARNING] Could not detect own IP address - proceeding with all discovered IPs")
+        # Detect and filter out ALL own IP addresses to prevent self-targeting
+        own_ips = get_all_own_ips()
+        logger.log(f"[INFO] Detected own IP addresses: {list(own_ips)}")
+        
+        # Filter out all own IPs and hostnames from discovered targets
+        original_count = len(scan_result["discovered_ips"])
+        filtered_ips = []
+        
+        for ip in scan_result["discovered_ips"]:
+            # Check direct IP match
+            if ip in own_ips:
+                logger.log(f"[INFO] Removed own IP {ip} from target list (skipped: self)")
+                continue
+            
+            # Check hostname resolution - look for patterns like pi.lan, hostname.local, etc.
+            is_self = False
+            try:
+                import socket
+                hostname = socket.gethostname()
+                # Check if this IP resolves to our hostname or common Pi patterns
+                try:
+                    reverse_hostname = socket.gethostbyaddr(ip)[0]
+                    if (reverse_hostname.startswith(hostname) or 
+                        reverse_hostname.startswith('pi.') or
+                        reverse_hostname.endswith('.lan') and 'pi' in reverse_hostname.lower()):
+                        logger.log(f"[INFO] Removed hostname-based self IP {ip} ({reverse_hostname}) from target list (skipped: self)")
+                        is_self = True
+                except:
+                    pass
+            except:
+                pass
+            
+            if not is_self:
+                filtered_ips.append(ip)
+        
+        # Update scan results with filtered IPs
+        scan_result["discovered_ips"] = filtered_ips
+        removed_count = original_count - len(filtered_ips)
+        if removed_count > 0:
+            stats["targets"] -= removed_count  # Adjust target count
+            logger.log(f"[INFO] Self-targeting prevention: Removed {removed_count} self-IPs from {original_count} discovered targets")
 
         # Recon Phase
         recon = Recon(logger=logger)
