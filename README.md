@@ -20,7 +20,7 @@ The purpose of this tool is to teach you what weaknesses there are within your o
     Follow on YouTube: <a href="https://www.youtube.com/@xenowificompanion">YouTube</a>
   </p>
   <p>
-    Join on Discord: <a href="https://discord.gg/RnSjNAPZ">Discord</a>
+    Join on Discord: <a href="https://discord.gg/XKwmuZ9wfP">Discord</a>
   </p>
   <p>
     For love and support: <a href="https://buymeacoffee.com/xenowificompanion">Buy Me a Coffee</a>
