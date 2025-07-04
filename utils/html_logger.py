@@ -26,6 +26,8 @@ class HTMLLogger:
             json.dump(data, file, indent=4)
 
         print(f"[INFO] Scan result saved to JSON: {json_file}")
+        # auto-generate HTML every time we save JSON
+        self.generate_html_from_json(ssid)
         return json_file
 
     def generate_html_from_json(self, ssid):
