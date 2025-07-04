@@ -9,6 +9,29 @@ class WiFiManager:
     def __init__(self, interface="wlan0", logger=None):
         self.interface = interface
         self.logger = logger if logger else Logger()
+        # detect and override with the actually connected Wi-Fi interface
+        self.detect_active_interface()
+
+    def detect_active_interface(self):
+        """
+        Check which wlan* is currently connected and update self.interface.
+        """
+        try:
+            result = subprocess.run(
+                ["nmcli", "-t", "-f", "DEVICE,TYPE,STATE", "device", "status"],
+                stdout=subprocess.PIPE, text=True, check=True
+            ).stdout
+            for line in result.splitlines():
+                dev, typ, state = line.split(":")
+                if typ == "wifi" and state == "connected":
+                    self.logger.log(f"[INFO] Active Wi-Fi interface detected: {dev}")
+                    self.interface = dev
+                    return dev
+        except Exception as e:
+            self.logger.log(f"[WARNING] Could not auto-detect Wi-Fi interface: {e}")
+        # fallback to whatever was passed in
+        self.logger.log(f"[INFO] Using interface: {self.interface}")
+        return self.interface
 
     def ensure_wlan0_active(self):
         """
