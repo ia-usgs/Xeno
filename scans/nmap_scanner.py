@@ -27,10 +27,11 @@ def run_nmap_scan(target, logger=None):
     try:
         logger.log(f"Starting nmap scan on target: {target}")
         result = subprocess.run(
-            ["nmap", "-sn", target],
+            ["sudo", "nmap", "-sn", "-PR", target],
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             text=True,
+            check=True
         )
         logger.log(f"nmap scan result:\n{result.stdout}")
 
