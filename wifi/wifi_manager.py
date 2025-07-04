@@ -4,7 +4,6 @@ import json
 from pathlib import Path
 from utils.logger import Logger
 
-
 class WiFiManager:
     def __init__(self, interface="wlan0", logger=None):
         self.interface = interface
