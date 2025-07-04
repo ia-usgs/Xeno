@@ -255,6 +255,7 @@ def run_scans(logger, wifi_manager, html_logger, display, state_manager):
 
         # Run Nmap scan
         logger.log(f"[INFO] Running nmap scan for network: {ssid}")
+        logger.log(f"[DEBUG] WiFiManager using interface: {wifi_manager.interface}")
         update_display_state(
             display,
             state_manager,
