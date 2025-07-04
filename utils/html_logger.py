@@ -26,94 +26,102 @@ class HTMLLogger:
             json.dump(data, file, indent=4)
 
         print(f"[INFO] Scan result saved to JSON: {json_file}")
-        # auto-generate HTML every time we save JSON
-        self.generate_html_from_json(ssid)
+
+        self.generate_html_from_json(ssid) #added this to test if the logs work
         return json_file
 
     def generate_html_from_json(self, ssid):
-        json_file = os.path.join(self.json_dir, f"{ssid}.json")
-        html_file = os.path.join(self.output_dir, f"{ssid}.html")
-        template_file = os.path.join("utils", "webInterface/wifiLogTemplate.html")
+        json_file     = os.path.join(self.json_dir,   f"{ssid}.json")
+        html_file     = os.path.join(self.output_dir, f"{ssid}.html")
+        template_file = os.path.join("utils", "webInterface", "wifiLogTemplate.html")
 
+        # 1) Load JSON data
         if not os.path.exists(json_file):
             print(f"[WARNING] No JSON file found for SSID: {ssid}. Cannot generate HTML log.")
             return
-        
-        with open(json_file, "r") as file:
-            data = json.load(file)
-        
+        with open(json_file, "r") as f:
+            data = json.load(f)
+
+        # 2) Load HTML template
         if not os.path.exists(template_file):
             print(f"[ERROR] Template file not found: {template_file}. Cannot generate HTML log.")
             return
-        
-        with open(template_file, "r") as file:
-            wifi_log_template = file.read()
-        
-        # Prepare HTML content
+        with open(template_file, "r") as f:
+            wifi_log_template = f.read()
+
+        # 3) Build scan entries, de-duplicating IPs and including hostname
+        seen_ips    = set()
         scan_entries = ""
         for scan in data["scans"]:
             if "result" in scan:
-                scan_entries += f"""
-                <p><b>Scan Conducted At:</b> {scan['timestamp']}</p>
+                scan_entries += f"<p><b>Scan Conducted At:</b> {scan['timestamp']}</p>\n"
+                scan_entries += """
                 <table>
-                    <thead>
-                        <tr>
-                            <th>IP Address</th>
-                            <th>MAC Address</th>
-                            <th>Vendor</th>
-                        </tr>
-                    </thead>
-                    <tbody>
+                  <thead>
+                    <tr>
+                      <th>IP Address</th>
+                      <th>Hostname</th>
+                      <th>MAC Address</th>
+                      <th>Vendor</th>
+                    </tr>
+                  </thead>
+                  <tbody>
                 """
                 discovered_devices = self._parse_nmap_result(scan["result"])
                 for device in discovered_devices:
+                    ip = device["ip"]
+                    if ip in seen_ips:
+                        continue
+                    seen_ips.add(ip)
                     scan_entries += f"""
                     <tr>
-                        <td>{device.get('ip', 'Unknown')}</td>
-                        <td>{device.get('mac', 'Unknown')}</td>
-                        <td>{device.get('vendor', 'Unknown')}</td>
+                      <td>{ip}</td>
+                      <td>{device.get('hostname', 'Unknown')}</td>
+                      <td>{device.get('mac', 'Unknown')}</td>
+                      <td>{device.get('vendor', 'Unknown')}</td>
                     </tr>
                     """
-                scan_entries += "</tbody></table>"
-        
+                scan_entries += "</tbody></table>\n"
+
+        # 4) Build vulnerability entries
         vulnerability_entries = ""
         for scan in data["scans"]:
             if "vulnerability_results" in scan:
-                vulnerability_entries += f"""
-                <p><b>Scan Conducted At:</b> {scan['timestamp']}</p>
+                vulnerability_entries += f"<p><b>Scan Conducted At:</b> {scan['timestamp']}</p>\n"
+                vulnerability_entries += """
                 <table>
-                    <thead>
-                        <tr>
-                            <th>Target</th>
-                            <th>Port</th>
-                            <th>Service</th>
-                            <th>Version</th>
-                            <th>Exploit Title</th>
-                            <th>Path</th>
-                        </tr>
-                    </thead>
-                    <tbody>
+                  <thead>
+                    <tr>
+                      <th>Target</th>
+                      <th>Port</th>
+                      <th>Service</th>
+                      <th>Version</th>
+                      <th>Exploit Title</th>
+                      <th>Path</th>
+                    </tr>
+                  </thead>
+                  <tbody>
                 """
                 for vuln in scan["vulnerability_results"].get("vulnerabilities", []):
                     vulnerability_entries += f"""
                     <tr>
-                        <td>{scan['vulnerability_results'].get('target', 'Unknown')}</td>
-                        <td>{vuln.get('port', 'Unknown')}</td>
-                        <td>{vuln.get('name', 'Unknown')}</td>
-                        <td>{vuln.get('version', 'Unknown')}</td>
-                        <td>{self._parse_exploit_titles(vuln.get('vulnerabilities', 'No Exploits'))}</td>
-                        <td>{self._parse_exploit_paths(vuln.get('vulnerabilities', 'No Paths'))}</td>
+                      <td>{scan['vulnerability_results'].get('target', 'Unknown')}</td>
+                      <td>{vuln.get('port', 'Unknown')}</td>
+                      <td>{vuln.get('name', 'Unknown')}</td>
+                      <td>{vuln.get('version', 'Unknown')}</td>
+                      <td>{self._parse_exploit_titles(vuln.get('vulnerabilities', 'No Exploits'))}</td>
+                      <td>{self._parse_exploit_paths(vuln.get('vulnerabilities', 'No Paths'))}</td>
                     </tr>
                     """
-            vulnerability_entries += """</tbody></table>"""
+                vulnerability_entries += "</tbody></table>\n"
 
-        # Replace placeholders in the template
+        # 5) Inject into template and write out HTML
         wifi_log_content = wifi_log_template.replace("{ssid}", ssid)
         wifi_log_content = wifi_log_content.replace("{scan_entries}", scan_entries)
         wifi_log_content = wifi_log_content.replace("{vulnerability_entries}", vulnerability_entries)
 
-        with open(html_file, "w") as file:
-            file.write(wifi_log_content)
+        with open(html_file, "w") as f:
+            f.write(wifi_log_content)
 
         print(f"[INFO] HTML log updated: {html_file}")
 
@@ -125,53 +133,50 @@ class HTMLLogger:
             result (str | dict): The raw Nmap scan result or a dictionary containing raw_output.
 
         Returns:
-            list: A list of dictionaries, each containing device details (IP, MAC, Vendor, OS Version).
+            list: A list of dictionaries, each containing device details (ip, hostname, mac, vendor, os_version).
         """
-        devices = []
-        device_map = {}  # Use a map to avoid duplicates and consolidate data
-
-        # Check if result is a string or dictionary
-        if isinstance(result, str):
-            lines = result.split("\n")  # Directly split string
-        elif isinstance(result, dict):
-            raw_output = result.get("raw_output", "")
-            if isinstance(raw_output, str):
-                lines = raw_output.split("\n")  # Split raw_output if it's a string
-            else:
-                lines = []  # Fallback to empty if raw_output is not a string
-        else:
-            lines = []  # Fallback to empty if result is neither string nor dict
-
+        device_map = {}
         current_ip = None
         current_mac = None
         vendor = "Unknown"
         os_version = "Unknown"
+        current_hostname = ""
+
+        # Normalize to lines
+        if isinstance(result, dict):
+            raw_output = result.get("raw_output", "")
+            lines = raw_output.split("\n") if isinstance(raw_output, str) else []
+        else:
+            lines = result.split("\n")
 
         for line in lines:
             if line.startswith("Nmap scan report for"):
-                # Extract IP or hostname
-                current_ip = line.split("for")[1].strip()
-                if "(" in current_ip and ")" in current_ip:
-                    current_ip = current_ip.split("(")[-1].strip(")")
+                raw = line.split("for", 1)[1].strip()
+                if "(" in raw and ")" in raw:
+                    current_hostname = raw.split("(")[0].strip()
+                    current_ip = raw.split("(")[1].strip(")")
+                else:
+                    current_hostname = ""
+                    current_ip = raw
+
             elif "MAC Address" in line:
-                # Extract MAC address and vendor
                 parts = line.split("MAC Address: ")
                 if len(parts) > 1:
                     mac_info = parts[1].split(" ", 1)
                     current_mac = mac_info[0]
                     vendor = mac_info[1].strip("()") if len(mac_info) > 1 else "Unknown"
-            elif "OS details" in line:
-                # Extract detailed OS information
+
+            elif "OS details:" in line:
                 os_version = line.split("OS details:")[1].strip()
+
             elif "Running:" in line:
-                # Extract running OS
                 os_version = line.split("Running:")[1].strip()
 
-            # Append or update device details when IP is found
             if current_ip:
                 if current_ip not in device_map:
                     device_map[current_ip] = {
                         "ip": current_ip,
+                        "hostname": current_hostname or "Unknown",
                         "mac": current_mac or "Unknown",
                         "vendor": vendor or "Unknown",
                         "os_version": os_version or "Unknown",
@@ -186,11 +191,13 @@ class HTMLLogger:
                         device_map[current_ip]["os_version"] = os_version
 
                 # Reset for next device
-                current_ip, current_mac, vendor, os_version = None, None, "Unknown", "Unknown"
+                current_ip = None
+                current_mac = None
+                vendor = "Unknown"
+                os_version = "Unknown"
+                current_hostname = ""
 
-        # Convert map to list
-        devices = list(device_map.values())
-        return devices
+        return list(device_map.values())
 
     def _parse_exploit_titles(self, vulnerabilities):
         if "Exploit Title" in vulnerabilities:
