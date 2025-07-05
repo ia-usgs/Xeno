@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Xeno Reports</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='logTheme.css') }}"/>
+  <!-- index-specific CSS -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='index.css') }}"/>
+</head>
+<body>
+  <!-- Dark overlay so text pops against the background -->
+  <div class="bg-overlay"></div>
+
+  <div class="container">
+    <header>
+      <h1>Xeno Reports</h1>
+      <hr/>
+    </header>
+
+    <main>
+      <ul class="report-list">
+        {% for file in files %}
+          <li><a href="{{ url_for('report', filename=file) }}">{{ file[:-5] }}</a></li>
+        {% endfor %}
+      </ul>
+    </main>
+  </div>
+</body>
+</html>
