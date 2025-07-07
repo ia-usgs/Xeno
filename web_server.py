@@ -12,7 +12,7 @@ from flask import Flask, send_from_directory, render_template
 # -----------------------------------------------------------------------------
 # Configuration
 # -----------------------------------------------------------------------------
-DEBUG = True
+DEBUG = False
 
 app = Flask(
     __name__,
