@@ -284,31 +284,41 @@ To run the script continuously on system startup:
 ```plaintext
 .
 ├── attacks/
-│   ├── exploit_tester.py       # Exploit testing module
-│   ├── file_stealer.py         # File stealing module
-│   ├── recon.py                # Reconnaissance module
-│   └── vulnerability_scan.py   # Vulnerability scanning module
+│   ├── exploit_tester.py         # Exploit testing module
+│   ├── file_stealer.py           # File stealing module
+│   ├── recon.py                  # Reconnaissance module
+│   └── vulnerability_scan.py     # Vulnerability scanning module
 ├── config/
-│   ├── password_list.txt       # Password list for brute-forcing
-│   ├── ssh_default_credentials.txt # Default SSH credentials
-│   └── wifi_credentials.json   # Wi-Fi credentials
-├── images/                     # Workflow state images
-├── logs/                       # Log directory
+│   ├── password_list.txt         # Password list for brute-forcing
+│   ├── ssh_default_credentials.txt  # Default SSH credentials
+│   └── wifi_credentials.json     # Wi-Fi credentials
+├── images/                       # Workflow state images (for e-paper & web UI)
+├── logs/                         # General log output directory
 ├── scans/
-│   └── nmap_scanner.py         # Nmap scanning module
-├── stolen_files/               # Directory for stolen files
+│   └── nmap_scanner.py           # Nmap scanning module
+├── stolen_files/                 # Directory for exfiltrated files
 ├── utils/
-│   ├── display.py              # E-paper display manager
-│   ├── html_logger.py          # HTML log generator
-│   ├── image_state_manager.py  # Workflow state manager
-│   ├── logger.py               # Logging utility
-│   ├── html_logs/              # HTML log directory
-│   └── json_logs/              # JSON log directory
+│   ├── display.py                # E-paper display manager
+│   ├── html_logger.py            # HTML log generator
+│   ├── image_state_manager.py    # Workflow state manager
+│   ├── logger.py                 # Core logging utility
+│   ├── html_logs/                # Generated HTML logs
+│   ├── json_logs/                # Generated JSON logs
+│   ├── waveshare_epd/            # EPD driver code
+│   └── webInterface/
+│       └── wifiLogTemplate.html  # Override HTML template
 ├── wifi/
-│   └── wifi_manager.py         # Wi-Fi connection manager
-├── install_file.sh             # Installation script
-├── main.py                     # Main script entry point
-└── README.md                   # This file
+│   └── wifi_manager.py           # Wi-Fi connection manager
+├── static/                       # Static web assets
+│   ├── images/                   # PNGs & icons for the web UI
+│   ├── index.css                 # Main stylesheet
+│   └── logTheme.css              # Theme stylesheet
+├── templates/                    # Jinja2 templates for Flask
+│   └── index.html                # HTML template for rendering logs
+├── install_file.sh               # One-shot install & setup script
+├── main.py                       # Slimmed-down orchestrator entry point
+└── README.md                     # Project overview & instructions
+
 ```
 
 ---
