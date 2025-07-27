@@ -1,497 +1,170 @@
+#!/usr/bin/env python3
+
 import os
 import time
 import logging
-# Suppress debug logs from Pillow (PIL)
-logging.getLogger("PIL").setLevel(logging.WARNING)
-from wifi.wifi_manager import WiFiManager
+
 from utils.logger import Logger
-from scans.nmap_scanner import run_nmap_scan
-from utils.html_logger import HTMLLogger
-from attacks.recon import Recon
-from attacks.vulnerability_scan import VulnerabilityScanner
-from attacks.exploit_tester import ExploitTester
-from attacks.file_stealer import FileStealer
-from utils.display import EPaperDisplay
-from utils.image_state_manager import ImageStateManager
-import subprocess
-import socket
-
-def load_ssh_credentials():
-    """
-    Load SSH credentials from predefined paths in the project directory.
-
-    Searches in the following order:
-        - /home/pi/xeno/config/ssh_default_credentials.txt
-        - /root/ssh_default_credentials.txt
-
-    Returns:
-        list: A list of dictionaries with SSH credentials, where each dictionary contains:
-            - username (str): The username for SSH login.
-            - password (str): The password for SSH login.
-
-    Raises:
-        Exception: If the file cannot be read or is improperly formatted.
-    """
-
-    potential_paths = [
-        "/home/pi/xeno/config/ssh_default_credentials.txt",
-        "/root/ssh_default_credentials.txt"
-    ]
-    for path in potential_paths:
-        if os.path.exists(path):
-            print(f"[INFO] Found SSH credentials at: {path}")
-            credentials = []
-            try:
-                with open(path, "r") as file:
-                    for line in file:
-                        line = line.strip()
-                        if line and ":" in line:
-                            username, password = line.split(":", 1)
-                            credentials.append({"username": username, "password": password})
-                return credentials
-            except Exception as e:
-                print(f"[ERROR] Failed to load SSH credentials from {path}: {e}")
-                return []
-    print("[ERROR] No SSH credentials file found in config or root.")
-    return []
-
-def load_wifi_credentials():
-    """
-    Load Wi-Fi credentials from predefined paths in the project directory.
-
-    Searches in the following order:
-        - /home/pi/xeno/config/wifi_credentials.json
-        - /root/wifi_credentials.json
-
-    Returns:
-        list: A list of dictionaries with Wi-Fi credentials, where each dictionary contains:
-            - SSID (str): The Wi-Fi network name.
-            - Password (str): The Wi-Fi network password.
-
-    Raises:
-        Exception: If the file cannot be read or is improperly formatted.
-    """
-
-    potential_paths = [
-        "/home/pi/xeno/config/wifi_credentials.json",
-        "/root/wifi_credentials.json"
-    ]
-    for path in potential_paths:
-        if os.path.exists(path):
-            print(f"[INFO] Found Wi-Fi credentials at: {path}")
-            try:
-                import json
-                with open(path, "r") as file:
-                    return json.load(file)
-            except Exception as e:
-                print(f"[ERROR] Failed to load Wi-Fi credentials from {path}: {e}")
-                return []
-    print("[ERROR] No Wi-Fi credentials file found in config or root.")
-    return []
-
-def initialize_display_template(display, current_ssid="Not Connected", stats=None):
-    """
-    Initialize the e-paper display with a basic template.
-
-    Parameters:
-        display (EPaperDisplay): The e-paper display object to update.
-        current_ssid (str): The name of the current Wi-Fi network (default: "Not Connected").
-        stats (dict): A dictionary with stats on targets, vulnerabilities, exploits, and files.
-
-    Default Stats:
-        - targets: 0
-        - vulns: 0
-        - exploits: 0
-        - files: 0
-
-    Raises:
-        Exception: If an error occurs during initialization or image rendering.
-"""
-
-    if stats is None:
-        stats = {"targets": 0, "vulns": 0, "exploits": 0, "files": 0}  # Default stats
-    try:
-        from PIL import Image
-        placeholder_image = Image.new('1', (60, 60), color=255)  # Blank image
-        prepared_image = display.prepare_image(placeholder_image)
-        layout = display.draw_layout(prepared_image, current_ssid=current_ssid, current_status="Initializing...", stats=stats)
-        display.display_image(layout, use_partial_update=False)  # Full refresh for initialization
-        print("[INFO] Template initialized.")
-    except Exception as e:
-        print(f"[ERROR] Failed to initialize display template: {e}")
-
-def update_display_state(self, state_manager, state, current_ssid="SSID",
-                         current_status="", stats=None, use_partial_update=True):
-    """
-    Update the e-paper display with the current workflow state.
-
-    Parameters:
-        self (EPaperDisplay): The e-paper display object to update.
-        state_manager (ImageStateManager): Manages workflow states and images.
-        state (str): The current workflow state (e.g., "scanning", "analyzing").
-        current_ssid (str): The name of the current Wi-Fi network.
-        current_status (str): The current status message to display.
-        stats (dict): A dictionary with stats on targets, vulnerabilities, exploits, and files.
-        use_partial_update (bool): Whether to perform a partial refresh (default: True).
-
-    Raises:
-        Exception: If the display update fails.
-"""
-
-    if stats is None:
-        stats = {"targets": 0, "vulns": 0, "exploits": 0, "files": 0}
-
-    try:
-        # Log the current state and refresh mode
-        logging.info(f"Updating display: state={state}, partial_refresh={use_partial_update}")
-
-        # Update workflow state and load corresponding image and message
-        state_manager.set_state(state)
-        image, xeno_message = state_manager.get_image_and_message_for_current_state()
-        prepared_image = self.prepare_image(image)
-
-        # Initialize the display in the correct mode
-        if use_partial_update:
-            # Partial refresh does not require reinitialization
-            logging.debug("Partial refresh mode: Skipping reinitialization.")
-        else:
-            # Full refresh requires initialization to default mode
-            self.initialize(partial_refresh=False)
-
-        # Combine the current status with the Xenomorph message
-        full_status = f"{current_status}\n{xeno_message}"
-
-        # Render layout and update display
-        layout = self.draw_layout(prepared_image, current_ssid=current_ssid,
-                                  current_status=full_status, stats=stats)
-        self.display_image(layout, use_partial_update=use_partial_update)
-
-        # Log success
-        logging.info(f"State updated successfully: {state}, partial_refresh={use_partial_update}")
-    except Exception as e:
-        logging.error(f"Failed to update display: {e}")
-
-def run_scans(logger, wifi_manager, html_logger, display, state_manager):
-    """
-    Perform the scanning and processing logic for the workflow.
-
-    Parameters:
-        logger (Logger): Logger for recording workflow progress.
-        wifi_manager (WiFiManager): Manages Wi-Fi connections.
-        html_logger (HTMLLogger): Generates HTML logs of scan results.
-        display (EPaperDisplay): Updates the e-paper display.
-        state_manager (ImageStateManager): Manages workflow states and images.
-
-    Workflow:
-        1. Initializes the display with default stats.
-        2. Loads Wi-Fi and SSH credentials.
-        3. Connects to Wi-Fi networks and performs scans.
-        4. Runs reconnaissance, vulnerability scans, and exploit testing.
-        5. Attempts file-stealing on discovered devices.
-        6. Updates the e-paper display dynamically with results.
-
-    Raises:
-        Exception: If any critical errors occur during scanning.
-"""
-
-    stats = {"targets": 0, "vulns": 0, "exploits": 0, "files": 0}  # Initialize stats
-
-    # Full refresh for the initial template
-    initialize_display_template(display, current_ssid="Not Connected", stats=stats)
-
-    wifi_credentials = load_wifi_credentials()
-    if not wifi_credentials:
-        logger.log("[ERROR] No Wi-Fi credentials loaded. Ensure the file exists in either config or root.")
-        return
-
-    ssh_credentials = load_ssh_credentials()
-    if not ssh_credentials:
-        logger.log("[ERROR] No SSH credentials loaded. Ensure the file exists in either config or root.")
-        return
-
-    connected_ssid = None  # Track the currently connected SSID
-
-    for network in wifi_credentials:
-        ssid = network.get("SSID")
-        password = network.get("Password")
-
-        if not ssid or not password:
-            continue
-
-        # Skip reconnection if already connected to the same SSID
-        if connected_ssid == ssid:
-            logger.log(f"[INFO] Already connected to SSID: {ssid}. Skipping reconnection.")
-        else:
-            wifi_manager.disconnect_wifi()
-
-            for attempt in range(3):
-                # Partial refresh for connecting to Wi-Fi
-                update_display_state(
-                    display,
-                    state_manager,
-                    "scanning",
-                    current_ssid=ssid,
-                    current_status="Connecting to Wi-Fi",
-                    stats=stats,
-                    use_partial_update=True
-                )
-                logger.log(f"[INFO] Attempting to connect to SSID: {ssid} (Attempt {attempt + 1}/3)")
-                if wifi_manager.connect_to_wifi(ssid, password):
-                    logger.log(f"[SUCCESS] Connected to SSID: {ssid}")
-                    connected_ssid = ssid
-                    break
-            else:
-                logger.log(f"[WARNING] Failed to connect to SSID: {ssid}.")
-                update_display_state(
-                    display,
-                    state_manager,
-                    "fallback",
-                    current_ssid=ssid,
-                    current_status="Connection failed. Retrying next...",
-                    stats=stats,
-                    use_partial_update=True
-                )
-                continue
-
-        # Run Nmap scan
-        logger.log(f"[INFO] Running nmap scan for network: {ssid}")
-        logger.log(f"[DEBUG] WiFiManager using interface: {wifi_manager.interface}")
-        update_display_state(
-            display,
-            state_manager,
-            "analyzing",
-            current_ssid=ssid,
-            current_status="Scanning the network",
-            stats=stats,
-            use_partial_update=True
-        )
-        scan_result = run_nmap_scan("192.168.1.0/24", logger=logger)
-
-        # This is to stop xeno attacking itself
-        local_ip = None
-        try:
-            # grab the IP assigned to our wireless interface
-            out = subprocess.run(
-                ["ip", "addr", "show", wifi_manager.interface],
-                stdout=subprocess.PIPE, text=True, check=True
-            ).stdout
-            for line in out.splitlines():
-                line = line.strip()
-                if line.startswith("inet "):
-                    # format is "inet 192.168.X.Y/24"
-                    local_ip = line.split()[1].split("/")[0]
-                    break
-        except Exception as e:
-            logger.log(f"[WARNING] Could not determine {wifi_manager.interface} IP: {e}")
-
-        if local_ip:
-            scan_result["discovered_ips"] = [
-                ip for ip in scan_result["discovered_ips"] if ip != local_ip
-            ]
-            logger.log(f"[INFO] Excluding our own {wifi_manager.interface} IP ({local_ip}) from scan targets.")
-
-        # Recon Phase
-        recon = Recon(logger=logger)
-        parsed_devices = []  # List to store structured device data
-
-        for ip in scan_result["discovered_ips"]:
-            update_display_state(
-                display,
-                state_manager,
-                "reconnaissance",
-                current_ssid=ssid,
-                current_status=f"Scanning IP {ip}",
-                stats=stats,
-                use_partial_update=True
-            )
-
-            # Detect OS during reconnaissance
-            os_detected = recon.detect_os(ip)
-            if "timed out" in scan_result.get("raw_output", "") or os_detected is None:
-                logger.log(f"[ERROR] OS detection returned None for IP {ip}. Defaulting to 'Unknown'.")
-                os_type = "Timeout"
-            else:
-                os_type = os_detected
-
-            # Parse devices from raw Nmap result
-            for line in scan_result["raw_output"].split("\n"):
-                if f"Nmap scan report for {ip}" in line:
-                    # Extract MAC address, vendor, and IP
-                    mac_address = "Unknown"
-                    vendor = "Unknown"
-                    next_lines = scan_result["raw_output"].split("\n")
-                    for next_line in next_lines:
-                        if "MAC Address" in next_line:
-                            mac_address = next_line.split(" ")[2].strip()
-                            vendor = " ".join(next_line.split(" ")[3:]).strip("()")
-                            break
-
-                    # Append structured data
-                    parsed_devices.append({
-                        "ip": ip,
-                        "mac": mac_address,
-                        "vendor": vendor,
-                        "os_version": os_type
-                    })
-
-        # Save parsed devices to the JSON file
-        scan_result["devices"] = parsed_devices
-        html_logger.save_scan_result_to_json(ssid, scan_result)
-
-        # Vulnerability Scan Phase
-        vuln_scanner = VulnerabilityScanner(logger=logger)
-        vulnerabilities = {}
-        for ip in scan_result["discovered_ips"]:
-            update_display_state(
-                display,
-                state_manager,
-                "investigating",
-                current_ssid=ssid,
-                current_status="Running vulnerability scan",
-                stats=stats,
-                use_partial_update=True
-            )
-            vuln_results = vuln_scanner.run_scan(ip, ssid=ssid, html_logger=html_logger)
-            if vuln_results:
-                stats["vulns"] += len(vuln_results)
-                vulnerabilities[ip] = vuln_results
-
-        # Exploit Testing Phase
-        exploit_tester = ExploitTester(logger=logger)
-        for ip, vuln_data in vulnerabilities.items():
-            for vuln in vuln_data["vulnerabilities"]:
-                logger.log(f"[INFO] Running exploit testing on IP: {ip} for vulnerability: {vuln}")
-                update_display_state(
-                    display,
-                    state_manager,
-                    "attacking",
-                    current_ssid=ssid,
-                    current_status="Running exploit tests",
-                    stats=stats,
-                    use_partial_update=True
-                )
-                exploit_tester.run_exploit_testing(
-                    service_data=vuln,
-                    target_ip=ip,
-                    ssid=ssid,
-                    html_logger=html_logger,
-                )
-                update_display_state(
-                    display,
-                    state_manager,
-                    "validating",
-                    current_ssid=ssid,
-                    current_status="Validating exploit results...",
-                    stats=stats,
-                    use_partial_update=True
-                )
-                stats["exploits"] += 1
-
-        # File Stealing Phase
-        file_stealer = FileStealer(logger=logger)
-        for ip in vulnerabilities.keys():
-            update_display_state(
-                display,
-                state_manager,
-                "attacking",
-                current_ssid=ssid,
-                current_status="Stealing files",
-                stats=stats,
-                use_partial_update=True
-            )
-            successful = False
-            for creds in ssh_credentials:
-                # Pass OS type to the file stealer
-                if file_stealer.steal_files(
-                    target_ip=ip,
-                    username=creds["username"],
-                    password=creds["password"],
-                    os_type=os_type
-                ):
-                    successful = True
-                    stats["files"] += 3  # Increment files per successful steal
-                    break
-
-            if successful:
-                logger.log(f"[SUCCESS] File stealing successful for IP: {ip}")
-                wifi_manager.disconnect_wifi()
-                connected_ssid = None  # Reset connected SSID after disconnecting
-                change_mac_address(logger)
-
-    # Full refresh after workflow completion
-    update_display_state(
-        display,
-        state_manager,
-        "success",
-        current_ssid="Completed Network",
-        current_status="Workflow Complete",
-        stats=stats,
-        use_partial_update=False  # Full refresh to clear any ghosting
-    )
-
-def change_mac_address(logger):
-    """
-    Change the MAC address of the `wlan0` interface.
-
-    Parameters:
-        logger (Logger): Logger for recording progress and errors.
-
-    Workflow:
-        1. Brings the `wlan0` interface down.
-        2. Uses `macchanger` to randomly set a new MAC address.
-        3. Brings the interface back up.
-
-    Raises:
-        subprocess.CalledProcessError: If any command fails during the process.
-"""
-
-    try:
-        logger.log("[INFO] Changing MAC address for wlan0.")
-        subprocess.run(["sudo", "ifconfig", "wlan0", "down"], check=True)
-        subprocess.run(["sudo", "macchanger", "-r", "wlan0"], check=True)
-        subprocess.run(["sudo", "ifconfig", "wlan0", "up"], check=True)
-        logger.log("[SUCCESS] MAC address changed successfully.")
-    except subprocess.CalledProcessError as e:
-        logger.log(f"[ERROR] Failed to change MAC address: {str(e)}")
+from services.wifi_service import WifiService
+from services.nmap_service import NmapService
+from services.recon_service import ReconService
+from services.vulnerability_service import VulnerabilityService
+from services.exploit_service import ExploitService
+from services.file_stealer_service import FileStealerService
+from services.log_service import LogService
+from services.display_service import DisplayService
 
 def main():
-    """
-    The main entry point for the Xeno project.
-
-    Initializes the following components:
-        - Logger: Handles logging for the application.
-        - WiFiManager: Manages Wi-Fi connections.
-        - HTMLLogger: Logs scan results in HTML format.
-        - EPaperDisplay: Manages the e-paper display updates.
-        - ImageStateManager: Tracks and manages workflow states and images.
-
-    Workflow:
-        1. Initializes display and loads required credentials.
-        2. Continuously performs scans and updates results.
-        3. Logs workflow progress and handles any exceptions.
-
-    Raises:
-        Exception: If a critical error occurs during initialization or execution.
-    """
+    # Prepare logging and directories
     os.makedirs("logs", exist_ok=True)
+    logging.basicConfig(level=logging.INFO)
     logger = Logger(log_file="logs/scan.log")
-    wifi_manager = WiFiManager(logger=logger)
-    html_logger = HTMLLogger(output_dir="utils/html_logs", json_dir="utils/json_logs")
-    display = EPaperDisplay()
-    state_manager = ImageStateManager()
+
+    # 1) Wi-Fi service & manager
+    wifi_svc     = WifiService(logger=logger)
+    wifi_manager = wifi_svc.manager
+
+    # 2) Other services
+    nmap_svc     = NmapService(wifi_manager, logger=logger)
+    recon_svc    = ReconService(logger=logger)
+    log_svc      = LogService()
+    vuln_svc     = VulnerabilityService(logger=logger, html_logger=log_svc.html_logger)
+    exploit_svc  = ExploitService(logger=logger, html_logger=log_svc.html_logger)
+    thief_svc    = FileStealerService(wifi_service=wifi_svc, logger=logger)
+
+    # 3) Display service — initialize once up front
+    display_svc = DisplayService()
+    display_svc.initialize()
+
+    # 4) Load Wi-Fi credentials
+    wifi_creds = wifi_svc.load_credentials()
+    if not wifi_creds:
+        logger.log("[ERROR] No Wi-Fi credentials found, exiting.")
+        return
 
     try:
-        display.initialize()
         while True:
-            logger.log("[INFO] Starting new scanning cycle.")
-            run_scans(logger, wifi_manager, html_logger, display, state_manager)
-            logger.log("[INFO] Scanning cycle completed. Sleeping for 10 minutes.")
-            time.sleep(600)  # Sleep for 10 minutes
+            for net in wifi_creds:
+                ssid = net.get("SSID")
+                pwd  = net.get("Password")
+                if not ssid or not pwd:
+                    continue
+
+                # Stats reset for this SSID
+                stats = {"targets": 0, "vulns": 0, "exploits": 0, "files": 0}
+
+                # --- 1) Connect ---
+                display_svc.update(
+                    state="scanning",
+                    ssid=ssid,
+                    status="Connecting to Wi-Fi",
+                    stats=stats,
+                    partial=True
+                )
+                if not wifi_svc.connect(ssid, pwd):
+                    display_svc.update(
+                        state="fallback",
+                        ssid=ssid,
+                        status="Connection failed, next...",
+                        stats=stats,
+                        partial=True
+                    )
+                    continue
+
+                # --- 2) Discovery ---
+                display_svc.update(
+                    state="analyzing",
+                    ssid=ssid,
+                    status="Running Nmap scan",
+                    stats=stats,
+                    partial=True
+                )
+                scan_res = nmap_svc.discover()
+                log_svc.save_scan(ssid, scan_res)
+                ips = scan_res.get("discovered_ips", [])
+                stats["targets"] = len(ips)
+
+                # --- 3) Reconnaissance ---
+                display_svc.update(
+                    state="reconnaissance",
+                    ssid=ssid,
+                    status=f"{stats['targets']} host(s) found",
+                    stats=stats,
+                    partial=True
+                )
+                devices = recon_svc.enrich_devices(scan_res["raw_output"], ips)
+                log_svc.append_recon(ssid, devices)
+
+                # --- 4) Vulnerability Scan ---
+                vuln_list = vuln_svc.scan(devices, ssid)
+                stats["vulns"] = sum(len(v["vulnerabilities"]) for v in vuln_list)
+                log_svc.append_vulns(ssid, vuln_list)
+                display_svc.update(
+                    state="investigating",
+                    ssid=ssid,
+                    status=f"{stats['vulns']} vuln(s) found",
+                    stats=stats,
+                    partial=True
+                )
+
+                # --- 5) Exploit Testing ---
+                targets = exploit_svc.test(vuln_list, ssid)
+                stats["exploits"] = len(targets)
+                display_svc.update(
+                    state="attacking",
+                    ssid=ssid,
+                    status=f"Attacking {stats['exploits']} host(s)",
+                    stats=stats,
+                    partial=True
+                )
+
+                # --- 6) File Stealing ---
+                stolen = thief_svc.steal(targets)
+                stats["files"] = len(stolen)
+                if stats["files"] > 0:
+                    display_svc.update(
+                        state="file_stolen",
+                        ssid=ssid,
+                        status=f"Stolen from {stats['files']} host(s)",
+                        stats=stats,
+                        partial=False
+                    )
+                else:
+                    logger.log("[WARNING] File stealing failed: no files exfiltrated.")
+                    display_svc.update(
+                        state="attacking",
+                        ssid=ssid,
+                        status="File stealing failed",
+                        stats=stats,
+                        partial=False
+                    )
+
+                # --- 7) Rotate MAC before next SSID ---
+                wifi_svc.disconnect()
+                wifi_svc.change_mac(interface=wifi_manager.interface)
+
+            # All networks done — final success screen
+            display_svc.update(
+                state="success",
+                ssid="All Networks",
+                status="Workflow Complete",
+                stats={"targets": 0, "vulns": 0, "exploits": 0, "files": 0},
+                partial=False
+            )
+
+            logger.log("[INFO] Cycle complete, sleeping for 10 minutes.")
+            time.sleep(600)
+
+    except KeyboardInterrupt:
+        logger.log("[INFO] Interrupted by user, exiting.")
     except Exception as e:
-        logger.log(f"[ERROR] Fatal error occurred: {e}")
+        logger.log(f"[ERROR] Fatal error: {e}")
     finally:
-        display.clear()  # Display is cleared
-        print("[INFO] E-paper display cleared.")
+        try:
+            display_svc.clear()
+        except Exception as e:
+            logger.log(f"[WARNING] Could not clear display: {e}")
+        logger.log("[INFO] Display cleared, shutdown complete.")
 
 if __name__ == "__main__":
     main()
