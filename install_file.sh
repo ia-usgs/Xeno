@@ -25,36 +25,61 @@ else
     echo -e "${GREEN}Pip is already installed.${RESET}"
 fi
 
-# Step 1: Clone or Update the Repository
+# Step 1: Clone or Update the Repository (preserving config, logs, and Xeno state)
 echo -e "${GREEN}[1/7] Cloning or updating the Xeno repository...${RESET}"
 
 # Define repository URL and clone path
 REPO_URL="https://github.com/ia-usgs/Xeno.git"
 CLONE_DIR="/home/pi/xeno"
 
+# Backup settings
+BACKUP_DIR="$HOME/xeno_backup_$(date +%s)"
+PRESERVE_ITEMS=("config" "logs" "utils/html_logs" "utils/json_logs" "state.json")
+
+# 1a) Backup existing items if repo already exists
+if [ -d "$CLONE_DIR" ]; then
+    mkdir -p "$BACKUP_DIR"
+    for item in "${PRESERVE_ITEMS[@]}"; do
+        if [ -e "$CLONE_DIR/$item" ]; then
+            cp -a "$CLONE_DIR/$item" "$BACKUP_DIR/"
+            echo -e "${GREEN}Backed up $item → $BACKUP_DIR/${RESET}"
+        fi
+    done
+fi
+
 cd "$HOME" || exit 1
 
-# If directory exists and is a git repo, pull latest changes
+# 1b) Update or clone the repo
 if [ -d "$CLONE_DIR/.git" ]; then
-    echo -e "${GREEN}Existing Git repository found. Pulling latest changes...${RESET}"
+    echo -e "${GREEN}Existing Git repository found. Cleaning and pulling latest changes...${RESET}"
     cd "$CLONE_DIR"
     git reset --hard HEAD
     git clean -fd
     git pull origin main || echo -e "${RED}Git pull failed. Continuing with existing version...${RESET}"
-# If directory exists but is not a repo, delete and clone
 elif [ -d "$CLONE_DIR" ]; then
     echo -e "${RED}$CLONE_DIR exists but is not a Git repository. Removing and cloning...${RESET}"
     sudo rm -rf "$CLONE_DIR"
     git clone "$REPO_URL" "$CLONE_DIR"
-# If directory doesn't exist, clone fresh
 else
     echo -e "${GREEN}Cloning repository into $CLONE_DIR...${RESET}"
     git clone "$REPO_URL" "$CLONE_DIR"
 fi
 
+# 1c) Restore preserved items
+for item in "${PRESERVE_ITEMS[@]}"; do
+    base="$(basename "$item")"
+    dir="$(dirname "$item")"
+    if [ -e "$BACKUP_DIR/$base" ]; then
+        mkdir -p "$CLONE_DIR/$dir"
+        cp -a "$BACKUP_DIR/$base" "$CLONE_DIR/$dir/"
+        echo -e "${GREEN}Restored $item from backup.${RESET}"
+    fi
+done
+
 # Set directory permissions
 sudo chmod -R 777 "$CLONE_DIR"
 sudo chown -R pi:pi "$CLONE_DIR"
+
 
 # Step 2: Update and Upgrade System
 echo -e "${GREEN}[2/7] Updating and upgrading system...${RESET}"
