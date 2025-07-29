@@ -296,6 +296,15 @@ To run the script continuously on system startup:
 ├── logs/                         # General log output directory
 ├── scans/
 │   └── nmap_scanner.py           # Nmap scanning module
+├── services/                     # High-level “service” wrappers  
+│   ├── display_service.py        # E-paper display orchestrator  
+│   ├── exploit_service.py        # Exploit testing orchestrator  
+│   ├── file_stealer_service.py   # File-stealer orchestrator  
+│   ├── log_service.py            # Logger/html-logger orchestration  
+│   ├── nmap_service.py           # Nmap scan orchestration  
+│   ├── recon_service.py          # Reconnaissance orchestration  
+│   ├── vulnerability_service.py  # Vulnerability scanning orchestration  
+│   └── wifi_service.py           # Wi-Fi connect/disconnect orchestration  
 ├── stolen_files/                 # Directory for exfiltrated files
 ├── utils/
 │   ├── display.py                # E-paper display manager
