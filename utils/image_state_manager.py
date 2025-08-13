@@ -1,4 +1,5 @@
 import os
+import json
 import logging
 from PIL import Image, ImageEnhance
 
@@ -6,7 +7,18 @@ from PIL import Image, ImageEnhance
 logging.basicConfig(level=logging.DEBUG)
 
 class ImageStateManager:
-    """Manages dynamic image updates based on workflow states."""
+    """
+    Manages dynamic image updates based on workflow states as well as
+    persisting counters for various workflow statistics.  In addition to
+    tracking which Xeno image to display for each workflow state, this
+    class now maintains a persistent handshake counter.  Keeping the
+    handshake count here centralises state management in one place and
+    allows other components (e.g., the e‑ink display and logging
+    services) to query or update the counter without duplicating file
+    operations.  The handshake counter is stored in a small JSON file
+    (`HANDSHAKE_FILE`) so that the number of captured handshakes
+    survives across program restarts and even full system reboots.
+    """
 
     # Map workflow states to corresponding images in the /images folder
     IMAGE_MAP = {
@@ -23,6 +35,7 @@ class ImageStateManager:
         "windows_fingerprint": "/home/pi/xeno/images/xeno_windows_fingerprint.png",
         "linux_fingerprint": "/home/pi/xeno/images/xeno_linux_fingerprint.png",
         "file_stolen": "/home/pi/xeno/images/xeno_stolen_file.png",
+        "handshake_capture": "/home/pi/xeno/images/xeno_handshake.png",
     }
 
     # Map workflow states to corresponding messages
@@ -43,8 +56,83 @@ class ImageStateManager:
     }
 
     def __init__(self):
-        """Initialize the ImageStateManager with a default state."""
+        """
+        Initialize the ImageStateManager with a default state.  In
+        addition to setting up the current workflow state, this will
+        initialize and load the persistent handshake count.  If the
+        handshake count file does not exist the counter will default
+        to zero.
+        """
         self.current_state = "scanning"
+        # Initialise handshake counter before any images are loaded
+        self.handshakes = 0
+        self._load_handshake_state()
+
+    # File used to persist the handshake counter.  We keep it at the
+    # repository root so that it can easily be inspected by the user.
+    HANDSHAKE_FILE = "handshake_state.json"
+
+    def _load_handshake_state(self):
+        """
+        Load the stored handshake count from disk.  If the file is
+        missing or cannot be parsed, the counter will be initialised to
+        zero.  Any I/O errors are logged but not raised so that
+        execution can proceed normally; a broken or missing file will
+        simply reset the counter.
+        """
+        try:
+            if os.path.exists(self.HANDSHAKE_FILE):
+                with open(self.HANDSHAKE_FILE, "r") as fh:
+                    data = json.load(fh)
+                self.handshakes = data.get("handshakes", 0)
+            else:
+                self.handshakes = 0
+        except Exception as exc:
+            # If something goes wrong (corrupt JSON, permission error), log
+            # the error and reset the counter.  This prevents the
+            # application from crashing on startup due to a bad state
+            # file.
+            logging.error(f"Failed to load handshake state: {exc}")
+            self.handshakes = 0
+
+    def _save_handshake_state(self):
+        """
+        Persist the current handshake count to disk.  This method is
+        called automatically whenever the count is incremented.  If
+        saving fails, an error will be logged but not raised.
+        """
+        try:
+            data = {"handshakes": self.handshakes}
+            with open(self.HANDSHAKE_FILE, "w") as fh:
+                json.dump(data, fh)
+            logging.debug(f"Handshake count saved: {self.handshakes}")
+        except Exception as exc:
+            logging.error(f"Failed to save handshake state: {exc}")
+
+    def increment_handshakes(self, count: int = 1):
+        """
+        Increment the handshake counter by the specified count and
+        immediately persist the new value to disk.  This should be
+        called whenever a handshake capture is detected.  A count of
+        zero or negative will have no effect.
+
+        Parameters:
+            count (int): The number of additional handshakes to record.
+        """
+        try:
+            if count > 0:
+                self.handshakes += count
+                self._save_handshake_state()
+        except Exception as exc:
+            logging.error(f"Error incrementing handshake count: {exc}")
+
+    def get_handshakes(self) -> int:
+        """
+        Return the number of handshakes captured so far.  This value is
+        loaded from disk during initialization and updated via
+        `increment_handshakes()`.
+        """
+        return self.handshakes
 
     def load_image(self, state):
         """

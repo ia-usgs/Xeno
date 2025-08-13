@@ -188,6 +188,53 @@ class EPaperDisplay:
             draw.text((5,110),  f"Age:   {self.age} days", font=font_body, fill=0)
             draw.text((75,110), f"Level: {self.level}",     font=font_body, fill=0)
 
+            # -----------------------------------------------------------------
+            # Handshake indicator
+            # We reserve a small region beneath the Age/Level row (y≈120) to
+            # draw a minimalist handshake icon along with the total count.
+            # The icon is rendered using simple shapes so we do not depend
+            # on external image assets.  A pair of overlapping ellipses
+            # suggests two hands shaking.  Immediately to the right of
+            # the icon we draw the numeric count of captured handshakes.
+            handshakes = stats.get('handshakes', 0)
+            # Coordinates for the icon (x, y) and size
+            icon_x = 5
+            icon_y = 120
+            icon_w = 12
+            icon_h = 8
+            # Draw a background box around the icon for clarity
+            draw.rectangle(
+                (icon_x, icon_y, icon_x + icon_w + 4, icon_y + icon_h),
+                outline=0,
+                fill=255
+            )
+            # Left 'hand'
+            draw.ellipse(
+                (icon_x + 1, icon_y + 1, icon_x + 5, icon_y + 5),
+                outline=0,
+                fill=0
+            )
+            # Right 'hand'
+            draw.ellipse(
+                (icon_x + 5, icon_y + 1, icon_x + 9, icon_y + 5),
+                outline=0,
+                fill=0
+            )
+            # Overlap shading: draw a smaller white ellipse to
+            # emphasise the handshake grip
+            draw.ellipse(
+                (icon_x + 4, icon_y + 2, icon_x + 7, icon_y + 4),
+                outline=255,
+                fill=255
+            )
+            # Numeric count; offset x to leave room after the icon
+            draw.text(
+                (icon_x + 17, icon_y),
+                f"{handshakes}",
+                font=font_body,
+                fill=0
+            )
+
             # Xeno image
             canvas.paste(image, (17,150))
 

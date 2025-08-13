@@ -428,3 +428,12 @@ else
     echo -e "${GREEN}Pet name updated in state.json.${RESET}"
 fi
 
+XENO_DIR="/home/pi/xeno"
+
+# Ensure everything is owned by pi:pi
+chown -R pi:pi "$XENO_DIR"
+sudo chmod -R 777 "$XENO_DIR"
+
+# Just in case we missed something in the beginning yk?
+echo -e "${GREEN}Permissions set for pi:pi under $XENO_DIR.${RESET}"
+

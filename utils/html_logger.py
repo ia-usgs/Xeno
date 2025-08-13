@@ -27,8 +27,50 @@ class HTMLLogger:
 
         print(f"[INFO] Scan result saved to JSON: {json_file}")
 
-        self.generate_html_from_json(ssid) #added this to test if the logs work
+        self.generate_html_from_json(ssid)  # keep regenerating on each write
         return json_file
+
+    def append_passwords(self, ssid, pw_map):
+        """
+        Normalize and append WPA-Sec recovered passwords into the JSON log
+        as a new scan 'result' entry with the key 'cracked_passwords'.
+
+        pw_map can be any of:
+          - { "SSID1": "password" }
+          - { "SSID1": ["pwd1", "pwd2"] }  (first non-empty wins)
+          - { "SSID1": {"password": "pwd", "bssid": "..."} }  (we extract .password)
+          - mixed forms; unknown shapes are stringified.
+        """
+        try:
+            # Normalize to {ssid: password}
+            normalized = {}
+            for k, v in (pw_map or {}).items():
+                pwd = ""
+                if isinstance(v, list):
+                    # prefer first non-empty item
+                    for item in v:
+                        if item:
+                            pwd = str(item)
+                            break
+                elif isinstance(v, dict):
+                    pwd = v.get("password") or v.get("pwd") or v.get("pass") or ""
+                    if not pwd and "value" in v:
+                        pwd = str(v["value"])
+                elif v is not None:
+                    pwd = str(v)
+
+                if pwd:
+                    normalized[str(k)] = pwd
+
+            if not normalized:
+                print(f"[INFO] append_passwords: nothing to add for {ssid} (empty set after normalization).")
+                return
+
+            print(f"[INFO] Appending {len(normalized)} WPA-Sec password(s) for {ssid}")
+            # Store as a scan result so your existing HTML renderer can pick it up
+            self.save_scan_result_to_json(ssid, {"cracked_passwords": normalized})
+        except Exception as exc:
+            print(f"[WARN] append_passwords failed for {ssid}: {exc}")
 
     def generate_html_from_json(self, ssid):
         json_file     = os.path.join(self.json_dir,   f"{ssid}.json")
@@ -50,14 +92,34 @@ class HTMLLogger:
             wifi_log_template = f.read()
 
         # 3) Compute scan date range
-        timestamps = [scan["timestamp"] for scan in data["scans"] if "timestamp" in scan]
+        timestamps = [scan.get("timestamp") for scan in data.get("scans", []) if scan.get("timestamp")]
         if timestamps:
             first, last = timestamps[0], timestamps[-1]
             date_range = f"Scans conducted from {first} to {last}"
         else:
             date_range = "No scans have been conducted yet."
 
-        # 4) Aggregate discovered devices across all scans
+        # Summarise total handshakes captured.
+        total_handshake_count = None
+        for scan in data.get("scans", []):
+            result = scan.get("result")
+            if isinstance(result, dict) and "handshake_count" in result:
+                total_handshake_count = result["handshake_count"]
+        handshake_summary = ""
+        if total_handshake_count is not None:
+            handshake_summary = f"Total handshakes captured: {total_handshake_count}"
+
+        # 4) Collect cracked passwords (from per-scan 'result.cracked_passwords')
+        cracked_pw_map = {}
+        for scan in data.get("scans", []):
+            res = scan.get("result")
+            if isinstance(res, dict):
+                pw_dict = res.get("cracked_passwords", {})
+                if isinstance(pw_dict, dict):
+                    # Later entries override earlier (latest wins)
+                    cracked_pw_map.update(pw_dict)
+
+        # 5) Aggregate discovered devices across all scans
         device_map = {}
         for scan in data["scans"]:
             if "result" not in scan:
@@ -79,8 +141,31 @@ class HTMLLogger:
                     if device_map[ip]["vendor"] == "Unknown" and d.get("vendor"):
                         device_map[ip]["vendor"] = d["vendor"]
 
-        # 5) Build the single Devices table
+        # 6) Prepare the cracked password table (if any).
+        password_entries = ""
+        if cracked_pw_map:
+            password_entries = """
+        <h3>Cracked Passwords</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>SSID</th>
+              <th>Password</th>
+            </tr>
+          </thead>
+          <tbody>
+        """
+            for ssid_key, pwd in sorted(cracked_pw_map.items()):
+                safe_ssid = str(ssid_key).replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+                safe_pwd  = str(pwd).replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+                password_entries += f"\n            <tr><td>{safe_ssid}</td><td>{safe_pwd}</td></tr>"
+            password_entries += "\n          </tbody>\n        </table>\n"
+
+        # 7) Build the scan_entries string
         scan_entries = f"<p><b>{date_range}</b></p>\n"
+        if handshake_summary:
+            scan_entries += f"<p><b>{handshake_summary}</b></p>\n"
+        scan_entries += password_entries
         scan_entries += """
         <table>
           <thead>
@@ -111,27 +196,54 @@ class HTMLLogger:
             """
         scan_entries += "</tbody></table>\n"
 
-        # 6) Aggregate vulnerabilities across all scans
+        # 8) Aggregate vulnerabilities across all scans (robust for list/dict, top-level or nested)
         vuln_map = {}
-        for scan in data["scans"]:
-            vr = scan.get("vulnerability_results")
-            if not vr:
-                continue
-            target = vr.get("target", "Unknown")
-            for v in vr.get("vulnerabilities", []):
-                key = (
-                    target,
-                    v.get("port",      "Unknown"),
-                    v.get("name",      "Unknown"),
-                    v.get("version",   "Unknown")
-                )
-                if key not in vuln_map:
-                    vuln_map[key] = {
-                        "exploits": self._parse_exploit_titles(v.get("vulnerabilities", "")),
-                        "paths":    self._parse_exploit_paths(v.get("vulnerabilities", ""))
-                    }
 
-        # 7) Build the single Vulnerabilities table
+        for scan in data.get("scans", []):
+            # Pull payload from either scan['vulnerability_results'] (historical)
+            # or scan['result']['vulnerability_results'] (current).
+            vr_payload = None
+            if isinstance(scan, dict):
+                if "vulnerability_results" in scan:
+                    vr_payload = scan["vulnerability_results"]
+                else:
+                    res = scan.get("result")
+                    if isinstance(res, dict):
+                        vr_payload = res.get("vulnerability_results")
+
+            if not vr_payload:
+                continue
+
+            # Normalize to a list of entries [{target, vulnerabilities:[...]}, ...]
+            entries = []
+            if isinstance(vr_payload, list):
+                entries = vr_payload
+            elif isinstance(vr_payload, dict):
+                entries = [vr_payload]
+            else:
+                # Unknown shape; skip safely
+                continue
+
+            for entry in entries:
+                if not isinstance(entry, dict):
+                    continue
+                target = entry.get("target", "Unknown")
+                for v in entry.get("vulnerabilities", []):
+                    if not isinstance(v, dict):
+                        continue
+                    key = (
+                        target,
+                        v.get("port",    "Unknown"),
+                        v.get("name",    "Unknown"),
+                        v.get("version", "Unknown"),
+                    )
+                    if key not in vuln_map:
+                        vuln_map[key] = {
+                            "exploits": self._parse_exploit_titles(v.get("vulnerabilities", "")),
+                            "paths":    self._parse_exploit_paths(v.get("vulnerabilities", "")),
+                        }
+
+        # 9) Build the Vulnerabilities table
         vulnerability_entries = """
         <table>
           <thead>
@@ -166,13 +278,15 @@ class HTMLLogger:
             """
         vulnerability_entries += "</tbody></table>\n"
 
-        # 8) Inject into your template
-        content = ( wifi_log_template
-                    .replace("{ssid}", ssid)
-                    .replace("{scan_entries}", scan_entries)
-                    .replace("{vulnerability_entries}", vulnerability_entries) )
+        # 10) Inject data into the template
+        content = (
+            wifi_log_template
+            .replace("{ssid}", ssid)
+            .replace("{scan_entries}", scan_entries)
+            .replace("{vulnerability_entries}", vulnerability_entries)
+        )
 
-        # 9) Write out the HTML
+        # 11) Write out the HTML
         with open(html_file, "w") as f:
             f.write(content)
 
@@ -267,11 +381,17 @@ class HTMLLogger:
         return "No Paths"
 
     def append_vulnerability_results_to_html(self, ssid, vulnerability_results):
-        json_file = os.path.join(self.json_dir, f"{ssid}.json")
+        """
+        Append vulnerability results as a new scan entry and regenerate HTML.
+        This stores the payload at the top level (historical behavior) so the
+        report can pick it up, but also plays nicely with entries that put
+        it under 'result'.
+        """
+        json_path = os.path.join(self.json_dir, f"{ssid}.json")
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-        if os.path.exists(json_file):
-            with open(json_file, "r") as file:
+        if os.path.exists(json_path):
+            with open(json_path, "r") as file:
                 data = json.load(file)
         else:
             data = {"ssid": ssid, "scans": []}
@@ -281,8 +401,9 @@ class HTMLLogger:
             "vulnerability_results": vulnerability_results
         })
 
-        with open(json_file, "w") as file:
+        with open(json_path, "w") as file:
             json.dump(data, file, indent=4)
 
         self.generate_html_from_json(ssid)
         print(f"[INFO] Vulnerability results appended and HTML updated for SSID: {ssid}")
+
