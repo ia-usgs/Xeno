@@ -440,6 +440,10 @@ This project is open for contributions! Feel free to fork the repository and sub
 
 This project is intended for **educational and ethical penetration testing** only. Unauthorized use on networks or devices is illegal and punishable by law.
 
+I, the creator, am not responsible for any actions, and or damages, caused by this software.
+You bear the full responsibility of your actions and acknowledge that this software was created for educational purposes only.
+This software's main purpose is NOT to be used maliciously, or on any system that you do not own, or have the right to use.
+
 **Use responsibly.**
 
 <p align="center">(<a href="#readme-top">back to top</a>)</p>
