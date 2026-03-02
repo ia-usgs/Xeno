@@ -99,6 +99,12 @@ The installer will:
 - Set up log directories and the `xeno.service` systemd unit
 - Configure the e-paper display drivers
 
+> **Default login credentials:**
+> - Username: `pi`
+> - Password: `raspberry`
+> - Hostname: `pi`
+>
+> Change the password after first login with `passwd`.
 ---
 
 ### Option C — Manual
@@ -118,7 +124,12 @@ sudo pip3 install -r requirements.txt --break-system-packages
 # 4. Enable SPI (for e-paper display)
 sudo raspi-config nonint do_spi 0
 ```
-
+> **Default login credentials:**
+> - Username: `pi`
+> - Password: `raspberry`
+> - Hostname: `pi`
+>
+> Change the password after first login with `passwd`.
 ---
 
 ## Configuration
