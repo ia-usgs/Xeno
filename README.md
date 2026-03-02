@@ -59,6 +59,13 @@ Xeno is a Python-based autonomous security tool that runs on a Raspberry Pi. It 
 
 Flash the official Xeno image to your SD card. Everything is pre-installed and the `xeno.service` systemd unit is enabled out of the box.
 
+> **Default login credentials:**
+> - Username: `pi`
+> - Password: `raspberry`
+> - Hostname: `pi`
+>
+> Change the password after first login with `passwd`.
+
 After first boot:
 1. Edit Wi-Fi credentials:
    ```bash
