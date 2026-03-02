@@ -1,0 +1,211 @@
+/* ══════════════════════════════════════════════════════════════
+   XENO LOG THEME — Shared base styles
+   ══════════════════════════════════════════════════════════════ */
+
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Orbitron:wght@500;700;900&display=swap');
+
+:root {
+  --bg-deep:       #050a12;
+  --bg-panel:      #0b1120;
+  --bg-card:       #111827;
+  --bg-hover:      #1e293b;
+  --border:        #1e293b;
+  --border-accent: #ef4444;
+  --text-primary:  #f1f5f9;
+  --text-secondary:#94a3b8;
+  --text-muted:    #64748b;
+  --accent:        #ef4444;
+  --accent-glow:   rgba(239, 68, 68, 0.4);
+  --cyan:          #22d3ee;
+  --cyan-glow:     rgba(34, 211, 238, 0.3);
+  --green:         #22c55e;
+  --yellow:        #eab308;
+  --purple:        #a855f7;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  overflow: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) var(--bg-deep);
+}
+
+body::-webkit-scrollbar { width: 6px; }
+body::-webkit-scrollbar-track { background: var(--bg-deep); }
+body::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+body {
+  font-family: 'JetBrains Mono', monospace;
+  background-color: var(--bg-deep);
+  color: var(--text-primary);
+  line-height: 1.6;
+}
+
+/* ─── Header ─── */
+header {
+  background: linear-gradient(180deg, var(--bg-panel), var(--bg-deep));
+  padding: 2rem 2rem 1.5rem;
+  border-bottom: 1px solid var(--border);
+  text-align: center;
+  position: relative;
+}
+header::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 200px;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--accent), transparent);
+}
+header h1 {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 1.8rem;
+  font-weight: 700;
+  margin: 0;
+  color: var(--accent);
+  text-shadow: 0 0 20px var(--accent-glow);
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+}
+
+/* ─── Sections ─── */
+section {
+  margin: 2rem;
+  padding: 1.5rem;
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+h2 {
+  font-family: 'Orbitron', sans-serif;
+  color: var(--accent);
+  font-size: 1.1rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 0.75rem;
+  margin-top: 0;
+}
+h3 {
+  color: var(--cyan);
+  font-size: 0.95rem;
+  font-weight: 500;
+  margin-top: 1.5rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--border);
+}
+
+/* ─── Tables ─── */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--bg-card);
+  margin: 1rem 0;
+  border-radius: 6px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+}
+th, td {
+  border: 1px solid var(--border);
+  padding: 0.65rem 1rem;
+  text-align: left;
+  font-size: 0.85rem;
+}
+th {
+  background: var(--bg-panel);
+  color: var(--accent);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-size: 0.75rem;
+}
+tr:nth-child(even) { background: var(--bg-panel); }
+tr:hover { background: var(--bg-hover); }
+
+/* ─── Utility ─── */
+.timestamp {
+  font-style: italic;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+}
+
+/* ─── Footer ─── */
+footer {
+  text-align: center;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin: 2rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--border);
+}
+
+/* ─── Status badges ─── */
+.badge {
+  display: inline-block;
+  padding: 0.15rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.badge-critical { background: rgba(239,68,68,0.2); color: var(--accent); border: 1px solid var(--accent); }
+.badge-warning  { background: rgba(234,179,8,0.2);  color: var(--yellow); border: 1px solid var(--yellow); }
+.badge-info     { background: rgba(34,211,238,0.2);  color: var(--cyan);   border: 1px solid var(--cyan); }
+.badge-safe     { background: rgba(34,197,94,0.2);   color: var(--green);  border: 1px solid var(--green); }
+
+/* ─── Animations ─── */
+@keyframes pulse-glow {
+  0%, 100% { opacity: 0.6; }
+  50%      { opacity: 1; }
+}
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ─── Report Stats Bar ─── */
+.report-stats {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.75rem 0;
+  margin-bottom: 1.25rem;
+  border-bottom: 1px solid var(--border);
+}
+.rstat { display: flex; align-items: center; }
+.rstat-date {
+  margin-left: auto;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+/* ─── Vuln badge summary bar ─── */
+.vuln-badge-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+/* ─── Cracked password highlight ─── */
+.cell-critical {
+  color: var(--accent);
+  font-weight: 700;
+}
+
+/* ─── Report badges: slightly larger than nav badges ─── */
+section .badge {
+  font-size: 0.72rem;
+  padding: 0.2rem 0.6rem;
+  letter-spacing: 0.07em;
+}

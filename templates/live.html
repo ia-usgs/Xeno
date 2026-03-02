@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>XENO — Live Feed</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='logTheme.css') }}" />
+  <link rel="stylesheet" href="{{ url_for('static', filename='index.css') }}" />
+  <style>
+    .nav-tabs {
+      display: flex;
+      gap: .5rem;
+      margin-bottom: 2rem;
+      justify-content: center;
+    }
+
+    .nav-tab {
+      display: inline-flex;
+      align-items: center;
+      gap: .5rem;
+      padding: .5rem 1.25rem;
+      background: var(--bg-panel);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text-secondary);
+      text-decoration: none;
+      font-size: .8rem;
+      text-transform: uppercase;
+      letter-spacing: .05em;
+      transition: all .2s;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .nav-tab:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    .nav-tab.active {
+      border-color: var(--accent);
+      color: var(--accent);
+      background: rgba(239, 68, 68, .1);
+    }
+
+    .nav-badge {
+      background: var(--accent);
+      color: #fff;
+      font-size: .65rem;
+      padding: .1rem .4rem;
+      border-radius: 10px;
+      font-weight: 700;
+    }
+
+    .feed-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      display: grid;
+      gap: .5rem;
+    }
+
+    .feed-item {
+      display: flex;
+      gap: .75rem;
+      align-items: flex-start;
+      padding: .75rem 1rem;
+      background: var(--bg-panel);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      border-left: 3px solid var(--accent);
+      font-size: .85rem;
+      animation: fadeUp .3s ease;
+    }
+
+    .feed-item[data-status="success"] {
+      border-left-color: #22c55e;
+    }
+
+    .feed-item[data-status="error"] {
+      border-left-color: #ef4444;
+    }
+
+    .feed-item[data-status="skipped"] {
+      border-left-color: #a3a3a3;
+      opacity: .7;
+    }
+
+    .feed-item[data-status="running"] {
+      border-left-color: #3b82f6;
+    }
+
+    .feed-status {
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      margin-top: 6px;
+      flex-shrink: 0;
+    }
+
+    .feed-status[data-s="running"] {
+      background: #3b82f6;
+      animation: pulse 1.5s infinite;
+    }
+
+    .feed-status[data-s="success"] {
+      background: #22c55e;
+    }
+
+    .feed-status[data-s="error"] {
+      background: #ef4444;
+    }
+
+    .feed-status[data-s="skipped"] {
+      background: #a3a3a3;
+    }
+
+    .feed-body {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .feed-phase {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: .7rem;
+      color: var(--accent);
+      text-transform: uppercase;
+      letter-spacing: .06em;
+    }
+
+    .feed-msg {
+      color: var(--text-primary);
+      margin-top: 2px;
+      word-break: break-word;
+    }
+
+    .feed-meta {
+      display: flex;
+      gap: 1rem;
+      font-size: .7rem;
+      color: var(--text-secondary);
+      margin-top: 4px;
+    }
+
+    .feed-controls {
+      display: flex;
+      gap: .5rem;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1rem;
+      flex-wrap: wrap;
+    }
+
+    .feed-controls button {
+      padding: .4rem .8rem;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      background: var(--bg-panel);
+      color: var(--text-secondary);
+      font-size: .75rem;
+      cursor: pointer;
+      font-family: 'JetBrains Mono', monospace;
+      transition: all .2s;
+    }
+
+    .feed-controls button:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    .live-dot {
+      display: inline-block;
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #22c55e;
+      animation: pulse 1.5s infinite;
+      margin-right: .4rem;
+    }
+
+    @keyframes pulse {
+
+      0%,
+      100% {
+        opacity: 1;
+      }
+
+      50% {
+        opacity: .3;
+      }
+    }
+
+    @keyframes fadeUp {
+      from {
+        opacity: 0;
+        transform: translateY(8px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="bg-overlay"></div>
+  <div class="container">
+    <header>
+      <h1>XENO</h1>
+      <hr />
+    </header>
+
+    <div class="nav-tabs">
+      <a href="/" class="nav-tab">📡 Reports</a>
+      <a href="/errors" class="nav-tab">
+        ⚠️ Errors
+        {% if error_count > 0 %}<span class="nav-badge">{{ error_count }}</span>{% endif %}
+      </a>
+      <a href="/live" class="nav-tab active"><span class="live-dot"></span> Live</a>
+      <a href="/files" class="nav-tab">💾 Files</a>
+      <button onclick="stopXeno()" class="nav-tab"
+        style="border-color:#ef4444;color:#ef4444;cursor:pointer;background:rgba(239,68,68,0.08);"
+        title="Stop Xeno &amp; dashboard">⏹ STOP</button>
+    </div>
+
+    <div class="feed-controls">
+      <span style="font-size:.75rem;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.08em;">
+        <span class="live-dot"></span> Live Activity — auto-refreshes every 3s
+      </span>
+      <button onclick="clearFeed()">🗑 Clear</button>
+    </div>
+
+    <ul class="feed-list" id="feed-list">
+      {% for ev in events %}
+      <li class="feed-item" data-status="{{ ev.status }}">
+        <span class="feed-status" data-s="{{ ev.status }}"></span>
+        <div class="feed-body">
+          <div class="feed-phase">{{ ev.phase }}</div>
+          <div class="feed-msg">{{ ev.message }}</div>
+          <div class="feed-meta">
+            <span>{{ ev.ssid }}</span>
+            <span>{{ ev.timestamp }}</span>
+          </div>
+        </div>
+      </li>
+      {% endfor %}
+    </ul>
+
+    {% if not events %}
+    <div class="empty-state">
+      <p>No activity yet.<br />Start a scan to see live progress.</p>
+    </div>
+    {% endif %}
+  </div>
+
+  <script>
+    function stopXeno() {
+      if (!confirm('Stop the Xeno scanner and shut down the dashboard?')) return;
+      fetch('/api/stop', { method: 'POST' }).catch(() => { });
+      setTimeout(() => {
+        document.body.innerHTML = '<div style="display:flex;align-items:center;justify-content:height:100vh;font-family:monospace;color:#ef4444;font-size:1.2rem;">⏹ Xeno stopped. You may close this tab.</div>';
+      }, 1500);
+    }
+
+    function renderEvents(events) {
+      const list = document.getElementById('feed-list');
+      list.innerHTML = '';
+      events.forEach(ev => {
+        const li = document.createElement('li');
+        li.className = 'feed-item';
+        li.dataset.status = ev.status;
+        li.innerHTML = `
+          <span class="feed-status" data-s="${ev.status}"></span>
+          <div class="feed-body">
+            <div class="feed-phase">${ev.phase}</div>
+            <div class="feed-msg">${ev.message}</div>
+            <div class="feed-meta">
+              <span>${ev.ssid}</span>
+              <span>${ev.timestamp}</span>
+            </div>
+          </div>`;
+        list.appendChild(li);
+      });
+    }
+
+    function poll() {
+      fetch('/api/activity')
+        .then(r => r.json())
+        .then(data => renderEvents(data.events))
+        .catch(() => { });
+    }
+
+    function clearFeed() {
+      fetch('/api/activity/clear', { method: 'POST' })
+        .then(() => poll())
+        .catch(() => { });
+    }
+
+    setInterval(poll, 3000);
+  </script>
+</body>
+
+</html>

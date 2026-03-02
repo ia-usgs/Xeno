@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>XENO — Scan Reports</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='logTheme.css') }}" />
+  <link rel="stylesheet" href="{{ url_for('static', filename='index.css') }}" />
+  <style>
+    .nav-tabs {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 2rem;
+      justify-content: center;
+    }
+
+    .nav-tab {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.5rem 1.25rem;
+      background: var(--bg-panel);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text-secondary);
+      text-decoration: none;
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      transition: all 0.2s;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .nav-tab:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    .nav-tab.active {
+      border-color: var(--accent);
+      color: var(--accent);
+      background: rgba(239, 68, 68, 0.1);
+    }
+
+    .nav-badge {
+      background: var(--accent);
+      color: #fff;
+      font-size: 0.65rem;
+      padding: 0.1rem 0.4rem;
+      border-radius: 10px;
+      font-weight: 700;
+    }
+
+    .nav-tab.stop-btn {
+      border-color: var(--accent);
+      color: var(--accent);
+      cursor: pointer;
+      background: rgba(239, 68, 68, 0.08);
+      transition: all 0.2s;
+    }
+
+    .nav-tab.stop-btn:hover {
+      background: rgba(239, 68, 68, 0.25);
+      box-shadow: 0 0 10px rgba(239, 68, 68, 0.4);
+    }
+
+    /* Shutdown modal */
+    #shutdown-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.75);
+      z-index: 9999;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      gap: 1rem;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    #shutdown-overlay.show {
+      display: flex;
+    }
+
+    #shutdown-box {
+      background: var(--bg-panel);
+      border: 1px solid var(--accent);
+      border-radius: 10px;
+      padding: 2rem 3rem;
+      text-align: center;
+      max-width: 400px;
+    }
+
+    #shutdown-box h2 {
+      color: var(--accent);
+      margin: 0 0 0.75rem;
+      font-size: 1.2rem;
+    }
+
+    #shutdown-box p {
+      color: var(--text-secondary);
+      margin: 0;
+      font-size: 0.85rem;
+    }
+
+    #shutdown-spinner {
+      width: 36px;
+      height: 36px;
+      border: 3px solid rgba(239, 68, 68, 0.2);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin: 1rem auto 0;
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="bg-overlay"></div>
+
+  <div class="container">
+    <header>
+      <h1>XENO</h1>
+      <hr />
+    </header>
+
+    <!-- Navigation tabs -->
+    <div class="nav-tabs">
+      <a href="/" class="nav-tab active">📡 Reports</a>
+      <a href="/errors" class="nav-tab">
+        ⚠️ Errors
+        {% if error_count > 0 %}
+        <span class="nav-badge">{{ error_count }}</span>
+        {% endif %}
+      </a>
+      <a href="/live" class="nav-tab"><span
+          style="display:inline-block;width:6px;height:6px;border-radius:50%;background:#22c55e;animation:pulse 1.5s infinite;margin-right:.3rem;"></span>
+        Live</a>
+      <a href="/files" class="nav-tab">💾 Files</a>
+      <button id="stop-btn" class="nav-tab stop-btn" title="Stop Xeno & dashboard">⏹ STOP</button>
+    </div>
+    </header>
+
+    <!-- Stats -->
+    <div class="stats-bar">
+      <div class="stat-card">
+        <span class="stat-value" id="total-count">{{ files|length }}</span>
+        <span class="stat-label">Total Reports</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-value" id="visible-count">{{ files|length }}</span>
+        <span class="stat-label">Showing</span>
+      </div>
+    </div>
+
+    <!-- Search -->
+    <div class="search-wrapper">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+        stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="11" cy="11" r="8" />
+        <path d="m21 21-4.35-4.35" />
+      </svg>
+      <input type="text" id="search-input" placeholder="Search reports…" autocomplete="off" />
+    </div>
+
+    <!-- Sort -->
+    <div class="sort-controls">
+      <label>Sort:</label>
+      <button class="sort-btn active" data-sort="alpha-asc">A → Z</button>
+      <button class="sort-btn" data-sort="alpha-desc">Z → A</button>
+    </div>
+
+    <main>
+      {% if files %}
+      <ul class="report-list" id="report-list">
+        {% for file in files %}
+        <li data-name="{{ file[:-5]|lower }}">
+          <a href="{{ url_for('report', filename=file) }}">
+            <span class="report-icon">📡</span>
+            <span class="report-name">{{ file[:-5] }}</span>
+            <span class="report-arrow">→</span>
+          </a>
+        </li>
+        {% endfor %}
+      </ul>
+      <p class="no-results" id="no-results">No reports match your search.</p>
+      {% else %}
+      <div class="empty-state">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"
+          stroke-linecap="round" stroke-linejoin="round">
+          <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z" />
+          <polyline points="13 2 13 9 20 9" />
+        </svg>
+        <p>No scan reports yet.<br />Run a scan to generate reports.</p>
+      </div>
+      {% endif %}
+    </main>
+  </div>
+
+  <!-- Auto-refresh indicator -->
+  <div class="refresh-indicator">
+    <span class="refresh-dot"></span>
+    Auto-refresh: <span id="refresh-timer">30</span>s
+  </div>
+
+  <!-- Shutdown overlay -->
+  <div id="shutdown-overlay">
+    <div id="shutdown-box">
+      <h2>⏹ Shutting Down</h2>
+      <p>Stopping the Xeno scanner and dashboard…</p>
+      <div id="shutdown-spinner"></div>
+    </div>
+  </div>
+
+  <script>
+    // ── Stop button ──
+    document.getElementById('stop-btn').addEventListener('click', () => {
+      if (!confirm('Stop the Xeno scanner and shut down the dashboard?')) return;
+      document.getElementById('shutdown-overlay').classList.add('show');
+      fetch('/api/stop', { method: 'POST' })
+        .catch(() => { })  // server dies — fetch will error, that's fine
+        .finally(() => {
+          setTimeout(() => {
+            document.getElementById('shutdown-box').innerHTML =
+              '<h2>✓ Stopped</h2><p>Server has shut down. You can close this tab or restart Xeno.</p>';
+          }, 2000);
+        });
+    });
+
+    // ── Search ──
+    const searchInput = document.getElementById('search-input');
+    const reportList = document.getElementById('report-list');
+    const noResults = document.getElementById('no-results');
+    const visibleCount = document.getElementById('visible-count');
+
+    if (searchInput && reportList) {
+      searchInput.addEventListener('input', function () {
+        const q = this.value.toLowerCase();
+        const items = reportList.querySelectorAll('li');
+        let shown = 0;
+        items.forEach(li => {
+          const match = li.dataset.name.includes(q);
+          li.style.display = match ? '' : 'none';
+          if (match) shown++;
+        });
+        if (visibleCount) visibleCount.textContent = shown;
+        if (noResults) noResults.style.display = shown === 0 ? 'block' : 'none';
+      });
+    }
+
+    // ── Sort ──
+    document.querySelectorAll('.sort-btn').forEach(btn => {
+      btn.addEventListener('click', function () {
+        document.querySelectorAll('.sort-btn').forEach(b => b.classList.remove('active'));
+        this.classList.add('active');
+        if (!reportList) return;
+        const items = Array.from(reportList.querySelectorAll('li'));
+        const dir = this.dataset.sort === 'alpha-desc' ? -1 : 1;
+        items.sort((a, b) => dir * a.dataset.name.localeCompare(b.dataset.name));
+        items.forEach(li => reportList.appendChild(li));
+      });
+    });
+
+    // ── Auto-refresh (every 30s) ──
+    let countdown = 30;
+    const timerEl = document.getElementById('refresh-timer');
+    setInterval(() => {
+      countdown--;
+      if (timerEl) timerEl.textContent = countdown;
+      if (countdown <= 0) {
+        countdown = 30;
+        location.reload();
+      }
+    }, 1000);
+  </script>
+</body>
+
+</html>

@@ -1,0 +1,20 @@
+{
+  "_comment": "Maps MAC address -> home SSID. Devices tagged to a different SSID than the current report are excluded from that report. Untagged devices appear as VISITOR in all reports. Set ssid to 'shared' for infrastructure devices (e.g. the router) that should appear in every report. This file is auto-populated on first scan — you rarely need to edit it manually.",
+  "devices": {
+    "AA:BB:CC:DD:EE:FF": {
+      "ssid": "shared",
+      "hostname": "router.lan",
+      "notes": "Router / gateway"
+    },
+    "11:22:33:44:55:66": {
+      "ssid": "YourNetwork1",
+      "hostname": "device1.lan",
+      "notes": "Example device on network 1"
+    },
+    "77:88:99:AA:BB:CC": {
+      "ssid": "YourNetwork2",
+      "hostname": "device2.lan",
+      "notes": "Example device on network 2"
+    }
+  }
+}
