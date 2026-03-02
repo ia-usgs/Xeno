@@ -100,14 +100,6 @@ class WiFiManager:
 
         self.ensure_wlan1_active()
 
-        # Hardware reset / NM restart workaround for Alfa adapters post-monitor mode
-        try:
-            self.logger.log(f"[INFO] Restarting NetworkManager to flush stale device states for {self.interface}...")
-            subprocess.run(["sudo", "systemctl", "restart", "NetworkManager"], check=True)
-            time.sleep(5) # wait for NM to come back up
-        except subprocess.CalledProcessError as e:
-            self.logger.log(f"[WARNING] Failed to restart NetworkManager: {e}")
-
         for attempt in range(retry_attempts):
             try:
                 self.logger.log(f"[INFO] Rescanning Wi-Fi networks before connecting to SSID: {ssid}")
@@ -128,7 +120,7 @@ class WiFiManager:
 
                 self.logger.log(f"[INFO] Attempting to connect to SSID: {ssid} (Attempt {attempt + 1}/{retry_attempts}) on {self.interface}")
                 result = subprocess.run(
-                    ["sudo", "nmcli", "dev", "wifi", "connect", ssid, "password", password, "ifname", self.interface, "hidden", "yes"],
+                    ["sudo", "nmcli", "dev", "wifi", "connect", ssid, "password", password, "ifname", self.interface],
                     stdout=subprocess.PIPE,
                     stderr=subprocess.PIPE,
                     text=True,
