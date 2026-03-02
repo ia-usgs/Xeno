@@ -16,7 +16,7 @@ class WifiService:
 
     def load_credentials(self):
         try:
-            with open(self.creds_path, "r") as f:
+            with open(self.creds_path, "r", encoding="utf-8", errors="replace") as f:
                 creds = json.load(f)
             self.logger.log(f"[INFO] Loaded {len(creds)} Wi-Fi credential sets.")
             return creds
@@ -24,9 +24,9 @@ class WifiService:
             self.logger.log(f"[ERROR] Failed to load Wi-Fi credentials: {e}")
             return []
 
-    def change_mac(self, interface="wlan0"):
+    def change_mac(self, interface="wlan1"):
         try:
-            self.logger.log("[INFO] Changing MAC address for wlan0.")
+            self.logger.log(f"[INFO] Changing MAC address for {interface}.")
             subprocess.run(["sudo", "ifconfig", interface, "down"], check=True)
             subprocess.run(["sudo", "macchanger", "-r", interface], check=True)
             subprocess.run(["sudo", "ifconfig", interface, "up"], check=True)
@@ -42,7 +42,7 @@ class WifiService:
         self.manager.disconnect_wifi()
         for i in range(1, attempts+1):
             self.logger.log(f"[INFO] Connecting to SSID '{ssid}' (Attempt {i}/{attempts})")
-            self.manager.ensure_wlan0_active()
+            self.manager.ensure_wlan1_active()
             # Rescan & give it a moment
             subprocess.run(["sudo", "nmcli", "dev", "wifi", "rescan"], check=False)
             time.sleep(2)

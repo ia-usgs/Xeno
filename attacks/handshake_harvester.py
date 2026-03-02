@@ -203,10 +203,12 @@ class HandshakeHarvester:
         """
         self.logger.log(f"[INFO] Starting handshake harvesting phase for SSID: {ssid}")
 
-        # Choose candidate(s): try the requested first, then wlan1 if different and present.
-        candidates = [interface]
-        if "wlan1" not in candidates and self._exists("wlan1"):
+        # Choose candidate(s): Enforce the Alfa adapter (wlan1) first, then fallback
+        candidates = []
+        if self._exists("wlan1"):
             candidates.append("wlan1")
+        if interface not in candidates and self._exists(interface):
+            candidates.append(interface)
 
         monitor_iface: Optional[str] = None
         base_iface: Optional[str] = None
@@ -268,11 +270,12 @@ class HandshakeHarvester:
 
         # Always restore NM management and services for the base iface
         self._nm_set_managed(base_iface, True)
-        self._restore_network_manager()
+        # Prevent restarting NetworkManager per user request as it drops active connections
+        # self._restore_network_manager()
 
         # Decide which iface to use for connection phase
         conn_iface = base_iface if base_iface else interface
         if not self._exists(conn_iface):
-            conn_iface = "wlan0" if self._exists("wlan0") else interface
+            conn_iface = "wlan1" if self._exists("wlan1") else interface
 
         return ap_count, conn_iface, handshake_captured

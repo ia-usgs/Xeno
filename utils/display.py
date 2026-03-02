@@ -8,7 +8,10 @@ sys.path.append('/home/pi/xeno/utils')
 
 import logging
 from PIL import Image, ImageDraw, ImageFont, ImageEnhance
-from waveshare_epd import epd2in13_V4
+try:
+    from waveshare_epd import epd2in13_V4
+except ImportError:
+    epd2in13_V4 = None
 import socket
 
 # Logging setup
@@ -31,7 +34,10 @@ class EPaperDisplay:
             level (int): The current level for the display (calculated dynamically).
             start_date (str or None): The start date of the display's usage, formatted as "YYYY-MM-DD".
         """
-        self.epd = epd2in13_V4.EPD()
+        if epd2in13_V4 is not None:
+            self.epd = epd2in13_V4.EPD()
+        else:
+            self.epd = None
         self.width = 122   # Display width
         self.height = 250  # Display height
         self.age = 0       # Age in days
@@ -86,13 +92,16 @@ class EPaperDisplay:
         Initialize the e-paper display.
         """
         try:
-            if partial_refresh:
-                logging.info("Initializing for partial refresh.")
-                self.epd.init_fast()
+            if self.epd:
+                if partial_refresh:
+                    logging.info("Initializing for partial refresh.")
+                    self.epd.init_fast()
+                else:
+                    logging.info("Initializing for full refresh.")
+                    self.epd.init()
+                self.epd.Clear(0xFF)
             else:
-                logging.info("Initializing for full refresh.")
-                self.epd.init()
-            self.epd.Clear(0xFF)
+                logging.info("[MOCK] Display initialized")
         except Exception as e:
             logging.error(f"Failed to initialize display: {e}")
             raise
@@ -215,11 +224,14 @@ class EPaperDisplay:
         Display the given image on the e-paper display.
         """
         try:
-            buf = self.epd.getbuffer(canvas)
-            if use_partial_update:
-                self.epd.displayPartial(buf)
+            if self.epd:
+                buf = self.epd.getbuffer(canvas)
+                if use_partial_update:
+                    self.epd.displayPartial(buf)
+                else:
+                    self.epd.display(buf)
             else:
-                self.epd.display(buf)
+                pass # Display bypassed
         except Exception as e:
             logging.error(f"Failed to display image: {e}")
             raise
@@ -229,8 +241,9 @@ class EPaperDisplay:
         Clear the e-paper display and put it to sleep.
         """
         try:
-            self.epd.Clear()
-            self.epd.sleep()
+            if self.epd:
+                self.epd.Clear()
+                self.epd.sleep()
             logging.info("Display cleared and sleeping.")
         except Exception as e:
             logging.error(f"Error clearing display: {e}")

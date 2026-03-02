@@ -12,39 +12,55 @@ class NmapService:
         self.manager = wifi_mgr
         self.logger  = logger or Logger(log_file="logs/scan.log")
 
-    def discover(self, target="192.168.1.0/24"):
+    def _get_local_subnet(self):
         """
-        Runs an Nmap discovery on the given target subnet, then
-        filters out the Pi's own IP on the active interface.
+        Derive the /24 subnet from the Pi's IP on the active interface.
+        e.g.  IP 10.0.0.78  →  '10.0.0.0/24'
+              IP 192.168.4.5 →  '192.168.4.0/24'
+        Falls back to '192.168.1.0/24' if detection fails.
+        """
+        iface = self.manager.interface
+        try:
+            out = subprocess.run(
+                ["ip", "addr", "show", iface],
+                stdout=subprocess.PIPE, text=True, check=False
+            ).stdout
+            local_ip = next(
+                (line.split()[1].split("/")[0]
+                 for line in out.splitlines() if line.strip().startswith("inet ")),
+                None
+            )
+            if local_ip:
+                parts = local_ip.split(".")
+                subnet = f"{parts[0]}.{parts[1]}.{parts[2]}.0/24"
+                self.logger.log(f"[INFO] Detected subnet {subnet} from {iface} ({local_ip})")
+                return subnet, local_ip
+        except Exception as e:
+            self.logger.log(f"[WARNING] Could not detect subnet from {iface}: {e}")
+        self.logger.log("[WARNING] Falling back to default subnet 192.168.1.0/24")
+        return "192.168.1.0/24", None
+
+    def discover(self):
+        """
+        Runs an Nmap discovery on the subnet derived from the active interface,
+        then filters out the Pi's own IP.
         Returns: { "discovered_ips": [...], "raw_output": "..." }
         """
-        # log which interface we're using
         self.logger.log(f"[DEBUG] WiFiManager using interface: {self.manager.interface}")
+
+        target, local_ip = self._get_local_subnet()
         self.logger.log(f"[INFO] Running Nmap discovery on {target}")
 
-        # perform the scan
         result = run_nmap_scan(target, logger=self.logger)
-
-        # determine and exclude our own IP
-        iface = self.manager.interface
-        out = subprocess.run(
-            ["ip", "addr", "show", iface],
-            stdout=subprocess.PIPE,
-            text=True,
-            check=False
-        ).stdout
-
-        local_ip = next(
-            (line.split()[1].split("/")[0]
-             for line in out.splitlines() if line.strip().startswith("inet ")),
-            None
-        )
 
         if local_ip:
             original = result.get("discovered_ips", [])
             filtered = [ip for ip in original if ip != local_ip]
             result["discovered_ips"] = filtered
-            self.logger.log(f"[INFO] Excluding our own {iface} IP ({local_ip}) from targets.")
+            self.logger.log(
+                f"[INFO] Excluding our own {self.manager.interface} IP "
+                f"({local_ip}) from targets."
+            )
 
         self.logger.log(f"[INFO] Nmap found {len(result.get('discovered_ips', []))} hosts.")
         return result

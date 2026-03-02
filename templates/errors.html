@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>XENO — Error Log</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='logTheme.css') }}" />
+  <link rel="stylesheet" href="{{ url_for('static', filename='index.css') }}" />
+  <style>
+    .nav-tabs {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 2rem;
+      justify-content: center;
+    }
+
+    .nav-tab {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.5rem 1.25rem;
+      background: var(--bg-panel);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text-secondary);
+      text-decoration: none;
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      transition: all 0.2s;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .nav-tab:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    .nav-tab.active {
+      border-color: var(--accent);
+      color: var(--accent);
+      background: rgba(239, 68, 68, 0.1);
+    }
+
+    .nav-badge {
+      background: var(--accent);
+      color: #fff;
+      font-size: 0.65rem;
+      padding: 0.1rem 0.4rem;
+      border-radius: 10px;
+      font-weight: 700;
+    }
+
+    .error-card {
+      background: var(--bg-panel);
+      border: 1px solid var(--border);
+      border-left: 3px solid var(--accent);
+      border-radius: 8px;
+      padding: 1rem 1.25rem;
+      margin-bottom: 0.75rem;
+      animation: fadeIn 0.3s ease both;
+    }
+
+    .error-card.warning {
+      border-left-color: var(--yellow);
+    }
+
+    .error-card .error-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 1rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .error-card .error-level {
+      display: inline-block;
+      padding: 0.15rem 0.5rem;
+      border-radius: 4px;
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      flex-shrink: 0;
+    }
+
+    .error-level.error {
+      background: rgba(239, 68, 68, 0.2);
+      color: var(--accent);
+      border: 1px solid var(--accent);
+    }
+
+    .error-level.critical {
+      background: rgba(239, 68, 68, 0.4);
+      color: #ff6b6b;
+      border: 1px solid #ff6b6b;
+    }
+
+    .error-level.warning {
+      background: rgba(234, 179, 8, 0.2);
+      color: var(--yellow);
+      border: 1px solid var(--yellow);
+    }
+
+    .error-card .error-time {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      white-space: nowrap;
+    }
+
+    .error-card .error-message {
+      font-size: 0.85rem;
+      color: var(--text-primary);
+      word-break: break-word;
+    }
+
+    .error-card .error-context {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      margin-top: 0.4rem;
+    }
+
+    .error-card .error-traceback {
+      margin-top: 0.5rem;
+      padding: 0.75rem;
+      background: var(--bg-deep);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+      white-space: pre-wrap;
+      word-break: break-all;
+      max-height: 200px;
+      overflow-y: auto;
+      display: none;
+    }
+
+    .error-card .toggle-tb {
+      background: none;
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      font-size: 0.7rem;
+      padding: 0.2rem 0.5rem;
+      border-radius: 4px;
+      cursor: pointer;
+      margin-top: 0.4rem;
+      font-family: 'JetBrains Mono', monospace;
+      transition: all 0.2s;
+    }
+
+    .toggle-tb:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    .clear-btn {
+      background: rgba(239, 68, 68, 0.15);
+      border: 1px solid rgba(239, 68, 68, 0.4);
+      color: var(--accent);
+      padding: 0.5rem 1rem;
+      border-radius: 6px;
+      cursor: pointer;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      transition: all 0.2s;
+    }
+
+    .clear-btn:hover {
+      background: rgba(239, 68, 68, 0.3);
+    }
+
+    .error-controls {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1.5rem;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+
+    .filter-btn {
+      background: var(--bg-panel);
+      border: 1px solid var(--border);
+      color: var(--text-secondary);
+      padding: 0.35rem 0.75rem;
+      border-radius: 4px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.75rem;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .filter-btn:hover,
+    .filter-btn.active {
+      border-color: var(--accent);
+      color: var(--accent);
+      background: rgba(239, 68, 68, 0.1);
+    }
+  </style>
+</head>
+
+<body>
+  <div class="bg-overlay"></div>
+
+  <div class="container">
+    <header>
+      <h1>XENO</h1>
+      <hr />
+    </header>
+
+    <!-- Navigation tabs -->
+    <div class="nav-tabs">
+      <a href="/" class="nav-tab">📡 Reports</a>
+      <a href="/errors" class="nav-tab active">
+        ⚠️ Errors
+        {% if error_count > 0 %}
+        <span class="nav-badge">{{ error_count }}</span>
+        {% endif %}
+      </a>
+      <a href="/live" class="nav-tab"><span
+          style="display:inline-block;width:6px;height:6px;border-radius:50%;background:#22c55e;animation:pulse 1.5s infinite;margin-right:.3rem;"></span>
+        Live</a>
+      <a href="/files" class="nav-tab">💾 Files</a>
+      <button onclick="stopXeno()" class="nav-tab"
+        style="border-color:#ef4444;color:#ef4444;cursor:pointer;background:rgba(239,68,68,0.08);"
+        title="Stop Xeno &amp; dashboard">⏹ STOP</button>
+    </div>
+
+    <!-- Controls -->
+    <div class="error-controls">
+      <div style="display: flex; gap: 0.5rem;">
+        <button class="filter-btn active" data-filter="all" onclick="filterErrors('all', this)">All</button>
+        <button class="filter-btn" data-filter="ERROR" onclick="filterErrors('ERROR', this)">Errors</button>
+        <button class="filter-btn" data-filter="CRITICAL" onclick="filterErrors('CRITICAL', this)">Critical</button>
+      </div>
+      <button class="clear-btn" onclick="clearErrors()">Clear All Errors</button>
+    </div>
+
+    <main>
+      {% if errors %}
+      <div id="error-list">
+        {% for err in errors %}
+        <div class="error-card {% if err.level == 'WARNING' %}warning{% endif %}" data-level="{{ err.level }}">
+          <div class="error-header">
+            <span class="error-level {{ err.level|lower }}">{{ err.level }}</span>
+            <span class="error-time">{{ err.timestamp }}</span>
+          </div>
+          <div class="error-message">{{ err.message }}</div>
+          {% if err.context %}
+          <div class="error-context">
+            {% for key, val in err.context.items() %}
+            <span>{{ key }}: {{ val }}</span>{% if not loop.last %} · {% endif %}
+            {% endfor %}
+          </div>
+          {% endif %}
+          {% if err.traceback %}
+          <button class="toggle-tb" onclick="toggleTraceback(this)">Show Traceback</button>
+          <div class="error-traceback">{{ err.traceback }}</div>
+          {% endif %}
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="empty-state">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"
+          stroke-linecap="round" stroke-linejoin="round">
+          <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+          <polyline points="22 4 12 14.01 9 11.01" />
+        </svg>
+        <p>No errors recorded.<br />The system is running cleanly.</p>
+      </div>
+      {% endif %}
+    </main>
+  </div>
+
+  <!-- Auto-refresh indicator -->
+  <div class="refresh-indicator">
+    <span class="refresh-dot"></span>
+    Auto-refresh: <span id="refresh-timer">15</span>s
+  </div>
+
+  <script>
+    function stopXeno() {
+      if (!confirm('Stop the Xeno scanner and shut down the dashboard?')) return;
+      fetch('/api/stop', { method: 'POST' }).catch(() => { });
+      setTimeout(() => {
+        document.body.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100vh;font-family:monospace;color:#ef4444;font-size:1.2rem;">⏹ Xeno stopped. You may close this tab.</div>';
+      }, 1500);
+    }
+
+    function toggleTraceback(btn) {
+      const tb = btn.nextElementSibling;
+      if (tb.style.display === 'block') {
+        tb.style.display = 'none';
+        btn.textContent = 'Show Traceback';
+      } else {
+        tb.style.display = 'block';
+        btn.textContent = 'Hide Traceback';
+      }
+    }
+
+    function filterErrors(level, btn) {
+      document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      document.querySelectorAll('.error-card').forEach(card => {
+        if (level === 'all' || card.dataset.level === level) {
+          card.style.display = '';
+        } else {
+          card.style.display = 'none';
+        }
+      });
+    }
+
+    function clearErrors() {
+      if (!confirm('Clear all error logs?')) return;
+      fetch('/api/errors/clear', { method: 'POST' })
+        .then(() => location.reload())
+        .catch(err => alert('Failed to clear errors: ' + err));
+    }
+
+    // Auto-refresh every 15s
+    let countdown = 15;
+    const timerEl = document.getElementById('refresh-timer');
+    setInterval(() => {
+      countdown--;
+      if (timerEl) timerEl.textContent = countdown;
+      if (countdown <= 0) {
+        countdown = 15;
+        location.reload();
+      }
+    }, 1000);
+  </script>
+</body>
+
+</html>

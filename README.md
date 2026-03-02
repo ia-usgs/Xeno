@@ -1,452 +1,278 @@
 <a id="readme-top"></a>
-# **Xeno: Wi-Fi Companion**
-<div align="center">
-  <img src="xeno.png" alt="Xeno Interface" width="250">
-</div>
-
-A Python-based tool for scanning, auditing, and performing penetration tests on Wi-Fi networks and connected devices. This project automates network scanning, reconnaissance, and security testing using custom scripts and external tools.
-The purpose of this tool is to teach you what weaknesses there are within your own network and for you to harden that network in order to better defend and protect it.
-
-<p align="center">
-  <img src="https://github.com/user-attachments/assets/60a09adc-5b39-44c4-82f6-1dbfa2e64a54" alt="image" />
-</p>
-
 
 <div align="center">
-  <p>
-    Join the Reddit community: <a href="https://www.reddit.com/r/xenowificompanion/s/Yu8tJWnRLq">Reddit</a>
-  </p>
-  <p>
-    Follow on YouTube: <a href="https://www.youtube.com/@xenowificompanion">YouTube</a>
-  </p>
-  <p>
-    Join on Discord: <a href="https://discord.gg/XKwmuZ9wfP">Discord</a>
-  </p>
-  <p>
-    For love and support: <a href="https://buymeacoffee.com/xenowificompanion">Buy Me a Coffee</a>
-  </p>
+  <img src="xeno.png" alt="Xeno" width="220"/>
+  <h1>XENO: Wi-Fi Companion</h1>
+  <p>Automated Wi-Fi auditing, reconnaissance, and penetration testing on a Raspberry Pi.</p>
+
+  [![Reddit](https://img.shields.io/badge/Reddit-Community-FF4500?style=flat-square&logo=reddit)](https://www.reddit.com/r/xenowificompanion/s/Yu8tJWnRLq)
+  [![YouTube](https://img.shields.io/badge/YouTube-Channel-FF0000?style=flat-square&logo=youtube)](https://www.youtube.com/@xenowificompanion)
+  [![Discord](https://img.shields.io/badge/Discord-Join-5865F2?style=flat-square&logo=discord)](https://discord.gg/XKwmuZ9wfP)
+  [![Buy Me a Coffee](https://img.shields.io/badge/Support-Buy%20Me%20a%20Coffee-FFDD00?style=flat-square&logo=buy-me-a-coffee)](https://buymeacoffee.com/xenowificompanion)
 </div>
 
 ---
 
-## **Features**
-
-- **Wi-Fi Scanning and Connection Management**
-  - Automatically connects to Wi-Fi networks based on provided credentials (`/home/pi/xeno/config/wifi_credentials.json`).
-  - Scans nearby networks and retries connections if necessary.
-  - Supports automatic MAC address randomization.
-
-- **Network Scanning and Enumeration**
-  - Uses `nmap` to discover devices on the network.
-  - Collects information on open ports, services, and possible vulnerabilities.
-
-- **Automated Reconnaissance**
-  - Identifies operating systems and running services on discovered devices.
-  - Performs detailed port scanning and OS fingerprinting.
-
-- **Exploit Testing**
-  - Uses `searchsploit` to identify and test exploits against discovered vulnerabilities.
-  - Supports downloading and executing payloads for penetration testing.
-
-- **File Harvesting**
-  - Uses SSH, FTP, and SMB to retrieve sensitive files from target devices.
-  - Dynamically targets OS-specific directories and file types.
-
-- **HTML and JSON Logging**
-  - Logs scan and attack results in both JSON (`/home/pi/xeno/utils/json_logs`) and HTML (`/home/pi/xeno/utils/html_logs`) formats for detailed review.
-  - Hosts flask server to allow users to see their logs without having to download them from the pi itself, uses IP:8080
-
-- **Dynamic E-Paper Display Updates**
-  - Displays workflow progress and stats on an e-paper display using custom images (`/home/pi/xeno/images`).
+> **Disclaimer:** Xeno is intended for **educational and ethical security testing only**. Only use it on networks and devices you own or have explicit written permission to test. Unauthorized use is illegal. By using this software you accept full responsibility for your actions.
 
 ---
 
-## **Parts List**
-  - Raspberry Pi (Recommended: Raspberry Pi 5, 4, 3B+, 0W)
-  - MicroSD Card (Minimum: 16GB)
-  - Wi-Fi Adapter (Optional but Recommended)
-  - Power Supply or Battery bank for portable (5V, 3A Recommended)
-  - waveshare 2.13inch E-Ink Display HAT V4
+## What is Xeno?
+
+Xeno is a Python-based autonomous security tool that runs on a Raspberry Pi. It connects to Wi-Fi networks one at a time, silently scans the subnet, fingerprints every device, tests for known vulnerabilities, and generates per-SSID HTML reports accessible from any browser on your network.
 
 ---
 
-# **Installation**
+## Features
 
-## Using the Community Image
-
-If you are using the official **Xeno Community Image** (pre-installed with everything), most components are already configured — including the default pet name: `"Xeno"`.
-
-### What’s Already Set Up
-
-- All Python dependencies, tools, and services.
-- `state.json` initialized with default values.
-- e-Paper display drivers installed.
-- Systemd service for Xeno is enabled.
+| Category | What Xeno does |
+|---|---|
+| **Wi-Fi Management** | Cycles through credentials in `config/wifi_credentials.json`, auto-reconnects, randomises MAC address |
+| **Device Discovery** | Two-phase nmap scan: ARP ping (fast, gets MACs) → OS fingerprinting (`-O`) on confirmed live hosts |
+| **Auto Device Registry** | New devices are automatically registered to `config/known_devices.json` on first scan, no manual entry needed |
+| **Per-SSID Isolation** | Devices are locked to the SSID they were first seen on; cross-contamination between reports is prevented at save time |
+| **Reconnaissance** | OS detection, open port enumeration, service/version fingerprinting via nmap & custom scripts |
+| **Vulnerability Scanning** | Matches discovered services against ExploitDB via `searchsploit` |
+| **Exploit Testing** | Downloads and executes matching exploits against vulnerable targets |
+| **File Harvesting** | Retrieves files from targets over SSH, FTP, and SMB |
+| **Web Dashboard** | Flask server on port `8080`. Reports, Errors, Live Feed, File Manager, and a **Stop** button |
+| **E-Paper Display** | Real-time workflow status on a Waveshare 2.13" HAT |
+| **Structured Logging** | JSON + HTML logs, centralised error log, live activity feed |
 
 ---
 
-### Changing the Pet Name (Optional)
+## Parts List
 
-To personalize your Xeno’s identity:
+| Item | Notes |
+|---|---|
+| Raspberry Pi | Pi 5, 4, 3B+, or Zero W recommended |
+| MicroSD Card | 16 GB minimum, 32 GB+ recommended |
+| Wi-Fi Adapter | Alfa AWUS036ACHM or similar dual-band adapter |
+| Power Supply | 5V 3A, or a USB battery bank for portable use |
+| Waveshare 2.13" E-Ink HAT V4 | Optional. Only needed for the physical display |
 
-1. Open the state file:
+---
+
+## Installation
+
+### Option A — Community Image (easiest)
+
+Flash the official Xeno image to your SD card. Everything is pre-installed and the `xeno.service` systemd unit is enabled out of the box.
+
+After first boot:
+1. Edit Wi-Fi credentials:
+   ```bash
+   sudo nano /home/pi/xeno/config/wifi_credentials.json
+   ```
+2. Optionally change the pet name:
    ```bash
    sudo nano /home/pi/xeno/state.json
+   # change "pet_name": "Xeno" to whatever you like
    ```
-
-2. Locate the line:
-   ```json
-   "pet_name": "Xeno"
-   ```
-
-3. Change `"Xeno"` to your preferred name:
-   ```json
-   "pet_name": "CyberDog"
-   ```
-
-4. Save and exit:
-   - Press `CTRL + X`
-   - Then press `Y`
-   - Then press `Enter`
+3. Reboot — Xeno starts automatically.
 
 ---
 
-### Recommended Next Steps
+### Option B — Automatic Installer
 
-After booting for the first time:
-
-- **Connect to Wi-Fi**:
-  Edit your networks in `/home/pi/xeno/config/wifi_credentials.json`.
-
-- **Customize Password Lists**:
-  Add your own to `/home/pi/xeno/config/password_list.txt`.
-
-- **Start Xeno Manually (only if you stopped the xeno service)** (optional):
-  ```bash
-  sudo python3 /home/pi/xeno/main.py
-  ```
-
-- **Or View Logs**:
-  ```bash
-  sudo journalctl -u xeno.service -f
-  ```
-
----
-
-
-### **Automatic Installation (Recommended)**
-
-Be sure to use the Raspberry Pi OS lite 64 bit version!!!! (Unless RPi0)
-
-1. Be sure to have your settings set this way:
-
-![image](https://github.com/user-attachments/assets/20de68d8-5bea-4e16-85ad-9a4449127d37)
-
-2. Clone the repository and run the installation script:
-   ```bash
-   git clone https://github.com/ia-usgs/Xeno.git
-   cd Xeno
-   sudo chmod 777 install_file.sh
-   sudo ./install_file.sh
-   ```
-   If you don't have git do the following:
-   ```
-    sudo apt update --fix-missing
-    sudo apt install git -y
-   ```
-
-3. The script will:
-   - Install all dependencies (Python libraries, tools like `nmap`, and e-paper display drivers).
-   - Clone required repositories (e.g., ExploitDB).
-   - Configure services and environment variables for the Xeno project.
-   - Set up logging directories (`logs/`, `utils/json_logs`, `utils/html_logs`).
-   - Set up the e-paper display.
-   - It will install theharvester and shodan, it is for a future update.
-
-4. Follow any on-screen prompts during the installation process.
-
----
-
-### **Manual Installation**
-
-Be sure to have your settings set this way:
-
-![image](https://github.com/user-attachments/assets/20de68d8-5bea-4e16-85ad-9a4449127d37)
-
-
-#### **1. Clone the Repository**
+> Use **Raspberry Pi OS Lite 64-bit** (except for Pi Zero W — use 32-bit Lite).
 
 ```bash
+sudo apt update && sudo apt install git -y
 git clone https://github.com/ia-usgs/Xeno.git
 cd Xeno
+sudo chmod +x install_file.sh
+sudo ./install_file.sh
 ```
 
-#### **2. Install Dependencies**
+The installer will:
+- Install all system dependencies (`nmap`, `network-manager`, `macchanger`, `smbclient`, …)
+- Install Python requirements
+- Clone ExploitDB
+- Set up log directories and the `xeno.service` systemd unit
+- Configure the e-paper display drivers
 
-Install required system and Python dependencies:
-
-```bash
-sudo apt-get update && sudo apt-get install -y git python3 python3-pip python3-venv curl dnsutils macchanger smbclient libjpeg-dev libpng-dev nmap fbi network-manager
-
-sudo pip3 install -r requirements.txt --break-system-packages
-```
-
-#### **3. Set Up Configuration Files**
-
-- **Wi-Fi Credentials**: Create a file at `/home/pi/xeno/config/wifi_credentials.json` with the following structure:
-  ```json
-  [
-      {"SSID": "NetworkName", "Password": "NetworkPassword"},
-      {"SSID": "AnotherNetwork", "Password": "AnotherPassword"}
-  ]
-  ```
-
-- **SSH Credentials**: Create a file at `/home/pi/xeno/config/ssh_default_credentials.txt` with the following format:
-  ```plaintext
-  username:password
-  anotheruser:anotherpassword
-  ```
-
-- **Password List**: Add any custom password lists for brute-force attempts in `/home/pi/xeno/config/password_list.txt`.
-
-#### **4. Configure e-Paper Display**
-
-Ensure SPI is enabled:
-```bash
-sudo raspi-config nonint do_spi 0
-```
 ---
 
-## **Usage**
-
-### **1. Run the Script Manually**
+### Option C — Manual
 
 ```bash
+# 1. Clone
+git clone https://github.com/ia-usgs/Xeno.git && cd Xeno
+
+# 2. System deps
+sudo apt-get update && sudo apt-get install -y \
+  git python3 python3-pip python3-venv curl dnsutils macchanger \
+  smbclient libjpeg-dev libpng-dev nmap network-manager
+
+# 3. Python deps
+sudo pip3 install -r requirements.txt --break-system-packages
+
+# 4. Enable SPI (for e-paper display)
+sudo raspi-config nonint do_spi 0
+```
+
+---
+
+## Configuration
+
+### Wi-Fi Credentials — `config/wifi_credentials.json`
+```json
+[
+  { "SSID": "HomeNetwork",   "Password": "hunter2"     },
+  { "SSID": "WorkNetwork",   "Password": "s3cur3p@ss"  }
+]
+```
+Xeno connects to each network in order, runs a full scan cycle, then moves on to the next.
+
+### SSH Credentials — `config/ssh_default_credentials.txt`
+```
+admin:admin
+pi:raspberry
+root:toor
+```
+
+### Known Devices — `config/known_devices.json`
+Xeno **auto-populates this file** as it scans. When a MAC address is seen for the first time on a given SSID, it is automatically registered to that SSID. You can also add entries manually:
+```json
+{
+  "devices": {
+    "AA:BB:CC:DD:EE:FF": {
+      "ssid": "HomeNetwork",
+      "hostname": "MyLaptop",
+      "notes": "Owner's MacBook Pro"
+    }
+  }
+}
+```
+
+---
+
+## Running Xeno
+
+### As a service (recommended)
+```bash
+sudo systemctl start xeno.service    # start
+sudo systemctl stop xeno.service     # stop
+sudo systemctl enable xeno.service   # auto-start on boot
+sudo journalctl -u xeno.service -f   # live logs
+```
+
+### Manually
+```bash
+cd /home/pi/xeno
 sudo python3 main.py
 ```
 
-### **2. Deploy as a System Service**
-
-To run the script continuously on system startup:
-
-1. Create a service file at `/etc/systemd/system/xeno.service`:
-   ```plaintext
-   [Unit]
-   Description=Xeno Wi-Fi Companion Service
-   After=network.target
-
-   [Service]
-   ExecStart=/usr/bin/python3 /home/pi/xeno/main.py
-   WorkingDirectory=/home/pi/xeno
-   Restart=always
-   User=pi
-   Group=pi
-   StandardOutput=inherit
-   StandardError=inherit
-   Restart=always
-   User=pi
-   Group=pi
-   Environment="PYTHONUNBUFFERED=1"
-   Environment="HOME=/home/pi"
-   Environment="PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
-   Environment="SDL_FBDEV=/dev/fb1"
-   Environment="SDL_VIDEODRIVER=fbcon"
-
-   [Install]
-   WantedBy=multi-user.target
-   ```
-
-2. Enable and start the service:
-   ```bash
-   sudo systemctl daemon-reload
-   sudo systemctl enable xeno.service
-   sudo systemctl start xeno.service
-   ```
+> If you get a `GPIO Busy` error when running manually, the service is still running so stop it first with `sudo systemctl stop xeno.service`.
 
 ---
 
-## **Monitoring and Logs**
+## Web Dashboard
 
-- **View live service logs:**
-  ```bash
-  sudo journalctl -u xeno.service -f
-  ```
+Xeno serves a dashboard on **`http://<pi-ip>:8080`** once it starts.
 
-- **Log directories:**
-  - **Scan Logs**: `/home/pi/xeno/logs/scan.log`
-  - **JSON Logs**: `/home/pi/xeno/utils/json_logs/`
-  - **HTML Logs**: `/home/pi/xeno/utils/html_logs/`
+| Page | URL | What it shows |
+|---|---|---|
+| Reports | `/` | Per-SSID HTML scan reports |
+| Errors | `/errors` | Runtime errors with severity badges |
+| Live | `/live` | Real-time activity feed (auto-refreshes every 3s) |
+| Files | `/files` | Browse and edit files on the Pi |
+
+### Stop Button
+Every page has a red **⏹ STOP** button in the nav bar. Clicking it:
+1. Prompts for confirmation
+2. Kills the `main.py` scanner process
+3. Shuts down the Flask server
+
+To restart after stopping: SSH in and run `sudo python3 main.py` or `sudo systemctl start xeno.service`.
+
+### Per-SSID Reports
+Each report shows:
+- **Device table** — IP, MAC, Vendor, OS, Hostname, Status badge (`IDENTIFIED` / `VISITOR`)
+- **Vulnerability table** — Port, Service, Version, Matched CVE/Exploit, Severity badge
+- OS detection is powered by nmap's `-O --osscan-guess` fingerprinting
 
 ---
 
-## **Directory Structure**
+## Directory Structure
 
-```plaintext
-.
+```
+xeno/
 ├── attacks/
-│   ├── exploit_tester.py         # Exploit testing module
-│   ├── file_stealer.py           # File stealing module
-│   ├── recon.py                  # Reconnaissance module
-│   └── vulnerability_scan.py     # Vulnerability scanning module
+│   ├── exploit_tester.py        # Exploit download & execution
+│   ├── file_stealer.py          # SSH/FTP/SMB file harvesting
+│   ├── recon.py                 # Port scan & OS fingerprinting
+│   └── vulnerability_scan.py   # searchsploit matching
 ├── config/
-│   ├── password_list.txt         # Password list for brute-forcing
-│   ├── ssh_default_credentials.txt  # Default SSH credentials
-│   └── wifi_credentials.json     # Wi-Fi credentials
-├── images/                       # Workflow state images (for e-paper & web UI)
-├── logs/                         # General log output directory
+│   ├── known_devices.json       # Auto-populated device registry (per-SSID)
+│   ├── password_list.txt        # Brute-force password list
+│   ├── ssh_default_credentials.txt
+│   └── wifi_credentials.json   # SSIDs & passwords to cycle through
 ├── scans/
-│   └── nmap_scanner.py           # Nmap scanning module
-├── services/                     # High-level “service” wrappers  
-│   ├── display_service.py        # E-paper display orchestrator  
-│   ├── exploit_service.py        # Exploit testing orchestrator  
-│   ├── file_stealer_service.py   # File-stealer orchestrator  
-│   ├── log_service.py            # Logger/html-logger orchestration  
-│   ├── nmap_service.py           # Nmap scan orchestration  
-│   ├── recon_service.py          # Reconnaissance orchestration  
-│   ├── vulnerability_service.py  # Vulnerability scanning orchestration  
-│   └── wifi_service.py           # Wi-Fi connect/disconnect orchestration  
-├── stolen_files/                 # Directory for exfiltrated files
+│   └── nmap_scanner.py          # Two-phase nmap (ARP discovery + OS detection)
+├── services/                    # Orchestration layer
+│   ├── exploit_service.py
+│   ├── file_stealer_service.py
+│   ├── log_service.py           # Save/filter scan data per-SSID, auto-register devices
+│   ├── nmap_service.py          # Dynamic subnet detection + host exclusion
+│   ├── recon_service.py
+│   ├── vulnerability_service.py
+│   └── wifi_service.py
+├── templates/                   # Flask/Jinja2 HTML templates
+│   ├── index.html               # Reports list
+│   ├── errors.html              # Error log
+│   ├── live.html                # Activity feed
+│   └── files.html               # File manager
 ├── utils/
-│   ├── display.py                # E-paper display manager
-│   ├── html_logger.py            # HTML log generator
-│   ├── image_state_manager.py    # Workflow state manager
-│   ├── logger.py                 # Core logging utility
-│   ├── html_logs/                # Generated HTML logs
-│   ├── json_logs/                # Generated JSON logs
-│   ├── waveshare_epd/            # EPD driver code
-│   └── webInterface/
-│       └── wifiLogTemplate.html  # Override HTML template
+│   ├── html_logger.py           # HTML report generator
+│   ├── logger.py                # JSON error + activity logging
+│   ├── html_logs/               # Generated per-SSID HTML reports
+│   └── json_logs/               # Raw scan JSON data
 ├── wifi/
-│   └── wifi_manager.py           # Wi-Fi connection manager
-├── static/                       # Static web assets
-│   ├── images/                   # PNGs & icons for the web UI
-│   ├── index.css                 # Main stylesheet
-│   └── logTheme.css              # Theme stylesheet
-├── templates/                    # Jinja2 templates for Flask
-│   └── index.html                # HTML template for rendering logs
-├── install_file.sh               # One-shot install & setup script
-├── main.py                       # Slimmed-down orchestrator entry point
-└── README.md                     # Project overview & instructions
-
+│   └── wifi_manager.py          # nmcli-based Wi-Fi manager
+├── logs/
+│   ├── scan.log                 # Main log file
+│   ├── errors.json              # Structured error log
+│   └── activity.json            # Live activity feed data
+├── static/                      # CSS & images for the dashboard
+├── web_server.py                # Flask dashboard server
+├── main.py                      # Entry point / scan orchestrator
+└── install_file.sh              # One-shot installation script
 ```
 
 ---
 
-## **Step-by-Step Workflow**
+## Monitoring & Debugging
 
-### **1. Prepare Configuration Files**
-- Add Wi-Fi networks in `/home/pi/xeno/config/wifi_credentials.json`.
-- Set default SSH credentials in `/home/pi/xeno/config/ssh_default_credentials.txt`.
-- Include a password list in `/home/pi/xeno/config/password_list.txt`.
+```bash
+# Live service log
+sudo journalctl -u xeno.service -f
 
-### **2. Run the Script**
-- **Manually**:
-  ```bash
-  sudo python3 main.py
-  ```
-- **As a service**:
-  Follow the "Service Mode" instructions above.
+# Main scan log
+tail -f /home/pi/xeno/logs/scan.log
 
-### **3. Monitor Logs**
-- View service logs:
-  ```bash
-  sudo journalctl -u xeno.service -f
-  ```
-- Review reports in:
-  - `/home/pi/xeno/utils/json_logs/`
-  - `/home/pi/xeno/utils/html_logs/`
+# Check for permission issues
+sudo chown root:pi <filename>
+sudo chmod 770 <filename>
+```
 
-### **4. Customize**
-- Add new attack modules in the `/home/pi/xeno/attacks` directory.
-- Modify workflows in `main.py`.
+**Common issues:**
 
----
-## **HTML Scan Log Overview**
-
-The latest update introduces a streamlined and visually enhanced HTML Logging Interface, making it easier than ever to review scan results.  
-
-Xeno now automatically launches a lightweight Flask server to serve your log reports through a styled HTML interface
-
-_No manual setup required on most models—just run Xeno, and your log viewer is ready to go!_
-
-### **Accessing the HTML Log (Raspberry Pi 3B+ and Newer)**
-1. Ensure Xeno is running:
-
-2. Open a web browser on your PC or mobile device.
-
-3. Visit:
-    <pre>http://insert-your-pi-ip:8080</pre>   
-
-4. On the landing page, click the link under **Xeno Reports** to view your **HTML log**.
-
-### **Manually Launching the Server and Accessing the HTML Log (Raspberry Pi Zero W / Zero W 2)**
-Due to hardware limitations, the automatic Flask launch may not work reliably on Pi Zero models. You can start the server manually:
-
-1. Navigate to the Xeno project directory:
-<pre>cd /home/pi/xeno/</pre>
-
-2. Start the Flask web server:
-<pre> sudo python3 web_server.py</pre>
-_Your terminal output should resemble the following:_   
-![Terminal Image](https://github.com/user-attachments/assets/b636aa46-c00d-4a0a-9a09-2ca7cd514145)
-
-3. While the server is running, open a web browser and visit:
-<pre>http://insert-your-pi-ip:8080</pre> 
-
-4. Click the link under **Xeno Reports** on the landing page to open your **HTML log**.
-
-### **Scan Log: Summary Panel**
-#### Lists all devices discovered during each scan
-![Device Summary Table](https://github.com/user-attachments/assets/e1a7bdc2-90b3-43da-a120-577c757d5ed5)
-
-**Details displayed:**
-- IP Address  
-- MAC Address  
-- Vendor/Manufacturer  
-
-**_Use this panel to quickly identify devices on the network and verify expected vs. unexpected clients_**
-
-### **Scan Log: Vulnerability Details Table**
-#### Outlines vulnerabilities detected during each scan
-![Vulnerability Table](https://github.com/user-attachments/assets/4b5b080b-d0f4-4b6f-a2c0-b3583ab00f8c)
-
-**Each row includes:**
-- Target IP  
-- Port  
-- Service Name  
-- Version  
-- Matched Exploit  
-- Exploit Title  
-- Exploit Path  
-
-**_Use this information to assess potential risks_**
----
-
-## **Debugging**
-- If you get `GPIO Busy` while running manually in CLI it is because the service is running.
-- Run `sudo systemctl stop xeno.service` the from `/xeno` directory run `sudo python main.py`
-- Check logs at `xeno/logs/scan.log`
-- If Xeno is not getting anything via scans, it could be that it is taking longer than 60 seconds.
-- To increase timeout go to `/xeno/attacks/recon.py` and modify line 42 `def scan_ports(self, target, timeout=60):` and change from 60 seconds to desired amount.
-- If any part of xeno is having permission issues, do `sudo chown root:pi filename` and then `sudo chmod 770 filename`
-
-### Contributions
-
-This project is open for contributions! Feel free to fork the repository and submit pull requests. Contact me on Reddit for discussions and suggestions.
+| Problem | Fix |
+|---|---|
+| `GPIO Busy` | Service is running. `sudo systemctl stop xeno.service` first |
+| Scan finds nothing | Increase recon timeout in `attacks/recon.py` → `def scan_ports(self, target, timeout=60)` |
+| OS shows Unknown | Device didn't respond to TCP probes (expected for IoT/phones in deep sleep) |
+| Exploit path not found | Ensure ExploitDB is installed at `/opt/exploitdb` |
+| UTF-8 decode error | Pull latest, all file I/O now uses `errors='replace'` |
 
 ---
 
-### **Disclaimer**
+## Contributing
 
-This project is intended for **educational and ethical penetration testing** only. Unauthorized use on networks or devices is illegal and punishable by law.
+Pull requests are welcome. For major changes open an issue or reach out on Reddit or Discord first.
 
-I, the creator, am not responsible for any actions, and or damages, caused by this software.
-You bear the full responsibility of your actions and acknowledge that this software was created for educational purposes only.
-This software's main purpose is NOT to be used maliciously, or on any system that you do not own, or have the right to use.
-
-By using this software, you automatically agree to the above.
-
-**Use responsibly.**
+---
 
 <p align="center">(<a href="#readme-top">back to top</a>)</p>
-

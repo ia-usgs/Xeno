@@ -1,4 +1,5 @@
 import os
+import re
 import json
 from datetime import datetime
 
@@ -8,21 +9,26 @@ class HTMLLogger:
         os.makedirs(output_dir, exist_ok=True)
         os.makedirs(json_dir, exist_ok=True)
         self.output_dir = output_dir
-        self.json_dir = json_dir
+        self.json_dir   = json_dir
+        # Path searched relative to cwd (works when run from the project root)
+        self._known_devices_path = os.path.join(
+            os.path.dirname(os.path.dirname(__file__)), "config", "known_devices.json"
+        )
+        self._known_devices = None   # loaded lazily
 
     def save_scan_result_to_json(self, ssid, scan_result):
         json_file = os.path.join(self.json_dir, f"{ssid}.json")
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
         if os.path.exists(json_file):
-            with open(json_file, "r") as file:
+            with open(json_file, "r", encoding="utf-8", errors="replace") as file:
                 data = json.load(file)
         else:
             data = {"ssid": ssid, "scans": []}
 
         data["scans"].append({"timestamp": timestamp, "result": scan_result})
 
-        with open(json_file, "w") as file:
+        with open(json_file, "w", encoding="utf-8") as file:
             json.dump(data, file, indent=4)
 
         print(f"[INFO] Scan result saved to JSON: {json_file}")
@@ -72,6 +78,26 @@ class HTMLLogger:
         except Exception as exc:
             print(f"[WARN] append_passwords failed for {ssid}: {exc}")
 
+    def _load_known_devices(self):
+        """Lazily load config/known_devices.json. Returns dict {MAC: entry} or {}."""
+        if self._known_devices is not None:
+            return self._known_devices
+        path = self._known_devices_path
+        if not os.path.exists(path):
+            self._known_devices = {}
+            return {}
+        try:
+            with open(path, "r", encoding="utf-8", errors="replace") as f:
+                raw = json.load(f)
+            # Normalise MAC keys to UPPER so comparisons are case-insensitive
+            self._known_devices = {
+                k.upper(): v for k, v in raw.get("devices", {}).items()
+            }
+        except Exception as exc:
+            print(f"[WARN] Could not load known_devices.json: {exc}")
+            self._known_devices = {}
+        return self._known_devices
+
     def generate_html_from_json(self, ssid):
         json_file     = os.path.join(self.json_dir,   f"{ssid}.json")
         html_file     = os.path.join(self.output_dir, f"{ssid}.html")
@@ -81,14 +107,14 @@ class HTMLLogger:
         if not os.path.exists(json_file):
             print(f"[WARNING] No JSON file found for SSID: {ssid}. Cannot generate HTML log.")
             return
-        with open(json_file, "r") as f:
+        with open(json_file, "r", encoding="utf-8", errors="replace") as f:
             data = json.load(f)
 
         # 2) Load HTML template
         if not os.path.exists(template_file):
             print(f"[ERROR] Template file not found: {template_file}. Cannot generate HTML log.")
             return
-        with open(template_file, "r") as f:
+        with open(template_file, "r", encoding="utf-8") as f:
             wifi_log_template = f.read()
 
         # 3) Compute scan date range
@@ -141,9 +167,35 @@ class HTMLLogger:
                     if device_map[ip]["vendor"] == "Unknown" and d.get("vendor"):
                         device_map[ip]["vendor"] = d["vendor"]
 
+        # 5b) Filter device_map using known_devices.json.
+        # - Devices whose home SSID == current ssid  → INCLUDED (IDENTIFIED)
+        # - Devices whose home SSID == 'shared'      → INCLUDED (SHARED / infra)
+        # - Devices with no entry in known_devices   → INCLUDED (VISITOR)
+        # - Devices whose home SSID is a DIFFERENT ssid → EXCLUDED
+        known = self._load_known_devices()
+        if known:
+            filtered = {}
+            for ip, info in device_map.items():
+                mac = info.get("mac", "Unknown").upper()
+                entry = known.get(mac)
+                if entry is None:
+                    # Not registered — show as VISITOR in every report
+                    info["_ownership"] = "visitor"
+                    filtered[ip] = info
+                elif entry.get("ssid", "").lower() == "shared":
+                    info["_ownership"] = "shared"
+                    filtered[ip] = info
+                elif entry.get("ssid", "") == ssid:
+                    info["_ownership"] = "home"
+                    filtered[ip] = info
+                # else: belongs to a different SSID — exclude silently
+            device_map = filtered
+
         # 6) Prepare the cracked password table (if any).
         password_entries = ""
+        pw_badge = ""
         if cracked_pw_map:
+            pw_badge = f'<span class="badge badge-critical">&#x26A0; {len(cracked_pw_map)} COMPROMISED</span>'
             password_entries = """
         <h3>Cracked Passwords</h3>
         <table>
@@ -158,76 +210,102 @@ class HTMLLogger:
             for ssid_key, pwd in sorted(cracked_pw_map.items()):
                 safe_ssid = str(ssid_key).replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
                 safe_pwd  = str(pwd).replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
-                password_entries += f"\n            <tr><td>{safe_ssid}</td><td>{safe_pwd}</td></tr>"
+                password_entries += f"\n            <tr><td>{safe_ssid}</td><td class=\"cell-critical\">{safe_pwd}</td></tr>"
             password_entries += "\n          </tbody>\n        </table>\n"
+        else:
+            pw_badge = '<span class="badge badge-safe">&#x2714; SECURE</span>'
 
-        # 7) Build the scan_entries string
-        scan_entries = f"<p><b>{date_range}</b></p>\n"
-        if handshake_summary:
-            scan_entries += f"<p><b>{handshake_summary}</b></p>\n"
+        # 7) Build the scan_entries string — stats bar + device table
+        device_count = len(device_map)
+        hs_badge_class = "badge-info" if total_handshake_count else "badge-safe"
+        hs_count_val   = total_handshake_count if total_handshake_count is not None else 0
+        scan_entries  = f"""
+        <div class="report-stats">
+          <div class="rstat">
+            <span class="badge badge-info">&#x1F4E1; {device_count} DEVICE{'S' if device_count != 1 else ''}</span>
+          </div>
+          <div class="rstat">
+            <span class="badge {hs_badge_class}">&#x1F91D; {hs_count_val} HANDSHAKE{'S' if hs_count_val != 1 else ''}</span>
+          </div>
+          <div class="rstat">{pw_badge}</div>
+          <div class="rstat rstat-date">{date_range}</div>
+        </div>
+        """
         scan_entries += password_entries
         scan_entries += """
         <table>
           <thead>
             <tr>
+              <th>Status</th>
               <th>IP Address</th>
               <th>Hostname</th>
               <th>MAC Address</th>
               <th>Vendor</th>
+              <th>Operating System</th>
             </tr>
           </thead>
           <tbody>
         """
         if device_map:
             for ip, info in device_map.items():
+                vendor    = info['vendor']
+                hostname  = info['hostname']
+                mac       = info['mac']
+                os_ver    = info.get('os_version', 'Unknown')
+                ownership = info.get('_ownership', 'visitor')
+                if ownership == 'home':
+                    status_badge = '<span class="badge badge-info">IDENTIFIED</span>'
+                elif ownership == 'shared':
+                    status_badge = '<span class="badge badge-safe">SHARED</span>'
+                else:  # visitor / unknown
+                    status_badge = '<span class="badge badge-warning">VISITOR</span>'
                 scan_entries += f"""
                 <tr>
+                  <td>{status_badge}</td>
                   <td>{ip}</td>
-                  <td>{info['hostname']}</td>
-                  <td>{info['mac']}</td>
-                  <td>{info['vendor']}</td>
+                  <td>{hostname}</td>
+                  <td>{mac}</td>
+                  <td>{vendor}</td>
+                  <td>{os_ver}</td>
                 </tr>
                 """
         else:
             scan_entries += """
             <tr>
-              <td colspan="4">Nothing detected in this run.</td>
+              <td colspan="6">Nothing detected in this run.</td>
             </tr>
             """
         scan_entries += "</tbody></table>\n"
 
-        # 8) Aggregate vulnerabilities across all scans (robust for list/dict, top-level or nested)
+        # 8) Aggregate vulnerabilities across all scans
+        # Only read from scan['result']['vulnerability_results'] (current format).
+        # The old top-level scan['vulnerability_results'] path is intentionally
+        # ignored to prevent duplicate rows when both formats exist in the same file.
         vuln_map = {}
 
         for scan in data.get("scans", []):
-            # Pull payload from either scan['vulnerability_results'] (historical)
-            # or scan['result']['vulnerability_results'] (current).
-            vr_payload = None
-            if isinstance(scan, dict):
-                if "vulnerability_results" in scan:
-                    vr_payload = scan["vulnerability_results"]
-                else:
-                    res = scan.get("result")
-                    if isinstance(res, dict):
-                        vr_payload = res.get("vulnerability_results")
+            res = scan.get("result")
+            if not isinstance(res, dict):
+                continue
+            vr_payload = res.get("vulnerability_results")
 
             if not vr_payload:
                 continue
 
-            # Normalize to a list of entries [{target, vulnerabilities:[...]}, ...]
+            # Normalize to a list of entries [{ip/target, vulnerabilities:[...]}, ...]
             entries = []
             if isinstance(vr_payload, list):
                 entries = vr_payload
             elif isinstance(vr_payload, dict):
                 entries = [vr_payload]
             else:
-                # Unknown shape; skip safely
                 continue
 
             for entry in entries:
                 if not isinstance(entry, dict):
                     continue
-                target = entry.get("target", "Unknown")
+                # Support both 'ip' (current) and 'target' (legacy) keys
+                target = entry.get("ip") or entry.get("target", "Unknown")
                 for v in entry.get("vulnerabilities", []):
                     if not isinstance(v, dict):
                         continue
@@ -244,10 +322,36 @@ class HTMLLogger:
                         }
 
         # 9) Build the Vulnerabilities table
-        vulnerability_entries = """
+        # Count risk levels for the section badge
+        critical_count = 0
+        warning_count  = 0
+        safe_count     = 0
+        for (_, _, svc, _), info in vuln_map.items():
+            exploits = info['exploits']
+            if exploits != "No Exploits":
+                critical_count += 1
+            elif svc in ("tcpwrapped", "unknown"):
+                warning_count += 1
+            else:
+                safe_count += 1
+
+        # Build a summary badge line for the vuln section
+        vuln_summary_badges = ""
+        if critical_count:
+            vuln_summary_badges += f'<span class="badge badge-critical">&#x26A0; {critical_count} CRITICAL</span> '
+        if warning_count:
+            vuln_summary_badges += f'<span class="badge badge-warning">&#x26A0; {warning_count} WARNING</span> '
+        if safe_count:
+            vuln_summary_badges += f'<span class="badge badge-safe">&#x2714; {safe_count} SAFE</span> '
+        if not vuln_map:
+            vuln_summary_badges = '<span class="badge badge-safe">&#x2714; CLEAN</span>'
+
+        vulnerability_entries = f'<div class="vuln-badge-bar">{vuln_summary_badges}</div>\n'
+        vulnerability_entries += """
         <table>
           <thead>
             <tr>
+              <th>Risk</th>
               <th>Target</th>
               <th>Port</th>
               <th>Service</th>
@@ -260,20 +364,29 @@ class HTMLLogger:
         """
         if vuln_map:
             for (target, port, svc, ver), info in vuln_map.items():
+                exploits = info['exploits']
+                paths    = info['paths']
+                if exploits != "No Exploits":
+                    risk_badge = '<span class="badge badge-critical">CRITICAL</span>'
+                elif svc in ("tcpwrapped", "unknown"):
+                    risk_badge = '<span class="badge badge-warning">WARNING</span>'
+                else:
+                    risk_badge = '<span class="badge badge-safe">SAFE</span>'
                 vulnerability_entries += f"""
                 <tr>
+                  <td>{risk_badge}</td>
                   <td>{target}</td>
                   <td>{port}</td>
                   <td>{svc}</td>
                   <td>{ver}</td>
-                  <td>{info['exploits']}</td>
-                  <td>{info['paths']}</td>
+                  <td>{exploits}</td>
+                  <td>{paths}</td>
                 </tr>
                 """
         else:
             vulnerability_entries += """
             <tr>
-              <td colspan="6">Nothing detected in this run.</td>
+              <td colspan="7">Nothing detected in this run.</td>
             </tr>
             """
         vulnerability_entries += "</tbody></table>\n"
@@ -287,123 +400,126 @@ class HTMLLogger:
         )
 
         # 11) Write out the HTML
-        with open(html_file, "w") as f:
+        with open(html_file, "w", encoding="utf-8") as f:
             f.write(content)
 
         print(f"[INFO] HTML log updated: {html_file}")
 
     def _parse_nmap_result(self, result):
         """
-        Helper function to parse Nmap result data and extract discovered devices.
-
-        Parameters:
-            result (str | dict): The raw Nmap scan result or a dictionary containing raw_output.
-
-        Returns:
-            list: A list of dictionaries, each containing device details (ip, hostname, mac, vendor, os_version).
+        Helper function to parse Nmap result data and extract discovered devices using regex.
         """
+        import re
         device_map = {}
         current_ip = None
-        current_mac = None
-        vendor = "Unknown"
-        os_version = "Unknown"
-        current_hostname = ""
 
-        # Normalize to lines
         if isinstance(result, dict):
             raw_output = result.get("raw_output", "")
-            lines = raw_output.split("\n") if isinstance(raw_output, str) else []
         else:
-            lines = result.split("\n")
+            raw_output = str(result)
 
-        for line in lines:
-            if line.startswith("Nmap scan report for"):
-                raw = line.split("for", 1)[1].strip()
-                if "(" in raw and ")" in raw:
-                    current_hostname = raw.split("(")[0].strip()
-                    current_ip = raw.split("(")[1].strip(")")
-                else:
-                    current_hostname = ""
-                    current_ip = raw
+        # Regex patterns
+        ip_pattern = re.compile(r"Nmap scan report for (?:([^\s()]+)\s*\(([\d.]+)\)|([\d.]+))")
+        mac_pattern = re.compile(r"MAC Address: ([0-9A-Fa-f:]+) \(([^)]+)\)")
+        os_details_pattern = re.compile(r"OS details: (.*)")
+        running_pattern = re.compile(r"Running: (.*)")
 
-            elif "MAC Address" in line:
-                parts = line.split("MAC Address: ")
-                if len(parts) > 1:
-                    mac_info = parts[1].split(" ", 1)
-                    current_mac = mac_info[0]
-                    vendor = mac_info[1].strip("()") if len(mac_info) > 1 else "Unknown"
+        for line in raw_output.splitlines():
+            ip_match = ip_pattern.search(line)
+            if ip_match:
+                # If we were tracking an IP, save it before starting a new one
+                if current_ip and current_ip in device_map:
+                    pass # Handled by direct dict mutation
+                
+                hostname = ip_match.group(1) or ""
+                current_ip = ip_match.group(2) or ip_match.group(3)
 
-            elif "OS details:" in line:
-                os_version = line.split("OS details:")[1].strip()
-
-            elif "Running:" in line:
-                os_version = line.split("Running:")[1].strip()
-
-            if current_ip:
                 if current_ip not in device_map:
                     device_map[current_ip] = {
                         "ip": current_ip,
-                        "hostname": current_hostname or "Unknown",
-                        "mac": current_mac or "Unknown",
-                        "vendor": vendor or "Unknown",
-                        "os_version": os_version or "Unknown",
+                        "hostname": hostname or "Unknown",
+                        "mac": "Unknown",
+                        "vendor": "Unknown",
+                        "os_version": "Unknown"
                     }
-                else:
-                    # Update only if new data is more specific
-                    if current_mac and device_map[current_ip]["mac"] == "Unknown":
-                        device_map[current_ip]["mac"] = current_mac
-                    if vendor and device_map[current_ip]["vendor"] == "Unknown":
-                        device_map[current_ip]["vendor"] = vendor
-                    if os_version and device_map[current_ip]["os_version"] == "Unknown":
-                        device_map[current_ip]["os_version"] = os_version
+                continue
 
-                # Reset for next device
-                current_ip = None
-                current_mac = None
-                vendor = "Unknown"
-                os_version = "Unknown"
-                current_hostname = ""
+            if not current_ip:
+                continue
+
+            mac_match = mac_pattern.search(line)
+            if mac_match:
+                device_map[current_ip]["mac"] = mac_match.group(1)
+                device_map[current_ip]["vendor"] = mac_match.group(2)
+                continue
+
+            os_match = os_details_pattern.search(line)
+            if os_match and device_map[current_ip]["os_version"] == "Unknown":
+                device_map[current_ip]["os_version"] = os_match.group(1).strip()
+                continue
+                
+            run_match = running_pattern.search(line)
+            if run_match and device_map[current_ip]["os_version"] == "Unknown":
+                device_map[current_ip]["os_version"] = run_match.group(1).strip()
+                continue
 
         return list(device_map.values())
 
+    @staticmethod
+    def _strip_ansi(text: str) -> str:
+        """Remove ANSI/VT100 terminal escape sequences from a string."""
+        return re.sub(r'\x1b\[[0-9;]*[mKHF]|\x1b\[K', '', text)
+
     def _parse_exploit_titles(self, vulnerabilities):
+        if not vulnerabilities:
+            return "No Exploits"
+        vulnerabilities = self._strip_ansi(vulnerabilities)
         if "Exploit Title" in vulnerabilities:
             lines = vulnerabilities.split("\n")
-            titles = [line.split("|")[0].strip() for line in lines if "|" in line]
-            return "<br>".join(titles)
+            titles = []
+            for line in lines:
+                if "|" in line and not line.startswith("-"):
+                    parts = line.split("|")
+                    if "Exploit Title" not in parts[0]:  # Skip header
+                        titles.append(parts[0].strip())
+            if titles:
+                return "<br>".join(titles)
         return "No Exploits"
 
     def _parse_exploit_paths(self, vulnerabilities):
+        if not vulnerabilities:
+            return "No Paths"
+        vulnerabilities = self._strip_ansi(vulnerabilities)
         if "|" in vulnerabilities:
             lines = vulnerabilities.split("\n")
-            paths = [line.split("|")[1].strip() for line in lines if "|" in line]
-            return "<br>".join(paths)
+            paths = []
+            for line in lines:
+                if "|" in line and not line.startswith("-"):
+                    parts = line.split("|")
+                    if len(parts) > 1 and "Path" not in parts[1]:  # Skip header
+                        paths.append(parts[1].strip())
+            if paths:
+                return "<br>".join(paths)
         return "No Paths"
 
     def append_vulnerability_results_to_html(self, ssid, vulnerability_results):
         """
         Append vulnerability results as a new scan entry and regenerate HTML.
-        This stores the payload at the top level (historical behavior) so the
-        report can pick it up, but also plays nicely with entries that put
-        it under 'result'.
+        Writes exclusively to scan['result']['vulnerability_results'] to avoid
+        duplicate rows in the aggregation step.
         """
-        json_path = os.path.join(self.json_dir, f"{ssid}.json")
-        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-
-        if os.path.exists(json_path):
-            with open(json_path, "r") as file:
-                data = json.load(file)
+        # Normalise: the caller may pass a single dict or a list of dicts.
+        if isinstance(vulnerability_results, dict):
+            # Old callers pass {target, vulnerabilities:[...]};
+            # convert to the current list-of-{ip, ...} format.
+            target = vulnerability_results.get("target", "Unknown")
+            vuln_list = vulnerability_results.get("vulnerabilities", [])
+            normalised = [{"ip": target, "vulnerabilities": vuln_list}]
+        elif isinstance(vulnerability_results, list):
+            normalised = vulnerability_results
         else:
-            data = {"ssid": ssid, "scans": []}
+            normalised = []
 
-        data["scans"].append({
-            "timestamp": timestamp,
-            "vulnerability_results": vulnerability_results
-        })
-
-        with open(json_path, "w") as file:
-            json.dump(data, file, indent=4)
-
-        self.generate_html_from_json(ssid)
+        self.save_scan_result_to_json(ssid, {"vulnerability_results": normalised})
         print(f"[INFO] Vulnerability results appended and HTML updated for SSID: {ssid}")
 

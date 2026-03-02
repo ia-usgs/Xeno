@@ -1,5 +1,28 @@
-__pycache__
-html_logs/
-json_logs/
-test_html_logger.py
-test_output/
+# ── Runtime / generated data (never commit these) ────────────────────────────
+logs/
+utils/json_logs/
+utils/html_logs/
+downloads/
+stolen_files/
+state.json
+handshake_state.json
+
+# ── Dev / debug test scripts ──────────────────────────────────────────────────
+test_*.py
+
+# ── Python ────────────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+*.egg-info/
+.env
+venv/
+.venv/
+
+# ── OS / editor ───────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+.idea/
+.vscode/

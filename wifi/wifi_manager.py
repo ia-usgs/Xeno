@@ -5,11 +5,13 @@ from pathlib import Path
 from utils.logger import Logger
 
 class WiFiManager:
-    def __init__(self, interface="wlan0", logger=None):
+    def __init__(self, interface="wlan1", logger=None):
+        # Default to Alfa (wlan1) as requested
         self.interface = interface
         self.logger = logger if logger else Logger()
-        # detect and override with the actually connected Wi-Fi interface
-        self.detect_active_interface()
+        # Only auto-detect if the user explicitly requested wlan0
+        if self.interface == "wlan0":
+            self.detect_active_interface()
 
     def detect_active_interface(self):
         """
@@ -32,24 +34,18 @@ class WiFiManager:
         self.logger.log(f"[INFO] Using interface: {self.interface}")
         return self.interface
 
-    def ensure_wlan0_active(self):
+    def ensure_wlan1_active(self):
         """
-        Ensure the wlan0 interface is active and set to managed mode.
-
-        Workflow:
-            - Checks the status of the Wi-Fi interface using `nmcli`.
-            - Activates and sets the interface to managed mode if it is inactive.
-
-        Raises:
-            subprocess.CalledProcessError: If an error occurs while interacting with the `nmcli` command.
+        Ensure the wlan1 interface is active and set to managed mode.
         """
-
         try:
             self.logger.log(f"Checking if {self.interface} is active.")
             result = subprocess.run(["sudo", "nmcli", "dev", "status"], stdout=subprocess.PIPE, text=True)
             if self.interface not in result.stdout:
                 self.logger.log(f"Bringing up {self.interface} interface.")
                 subprocess.run(["sudo", "nmcli", "dev", "set", self.interface, "managed", "yes"], check=True)
+                # Ensure the interface is actually physically up
+                subprocess.run(["sudo", "ifconfig", self.interface, "up"], check=False)
         except subprocess.CalledProcessError as e:
             self.logger.log(f"[ERROR] Error ensuring {self.interface} is active: {e}")
 
@@ -102,17 +98,37 @@ class WiFiManager:
             subprocess.CalledProcessError: If an error occurs while executing the `nmcli` command.
         """
 
-        self.ensure_wlan0_active()
+        self.ensure_wlan1_active()
+
+        # Hardware reset / NM restart workaround for Alfa adapters post-monitor mode
+        try:
+            self.logger.log(f"[INFO] Restarting NetworkManager to flush stale device states for {self.interface}...")
+            subprocess.run(["sudo", "systemctl", "restart", "NetworkManager"], check=True)
+            time.sleep(5) # wait for NM to come back up
+        except subprocess.CalledProcessError as e:
+            self.logger.log(f"[WARNING] Failed to restart NetworkManager: {e}")
 
         for attempt in range(retry_attempts):
             try:
                 self.logger.log(f"[INFO] Rescanning Wi-Fi networks before connecting to SSID: {ssid}")
-                subprocess.run(["sudo", "nmcli", "dev", "wifi", "rescan"], check=True)
-                time.sleep(2)  # Allow time for the scan to complete
+                subprocess.run(["sudo", "nmcli", "dev", "wifi", "rescan"], check=False)
+                time.sleep(4)  # Allow time for NM to populate BSS list
+                
+                # Delete any existing profiles matching the SSID to prevent NM 'property is missing' update conflicts
+                try:
+                    existing_cons = subprocess.check_output(["nmcli", "-t", "-f", "NAME,UUID", "con", "show"], text=True)
+                    for line in existing_cons.splitlines():
+                        if not line: continue
+                        c_name, c_uuid = line.split(":", 1)
+                        if c_name == ssid or c_name.startswith(f"{ssid} "):
+                            self.logger.log(f"[INFO] Deleting conflicting NM profile: {c_name}")
+                            subprocess.run(["sudo", "nmcli", "con", "delete", "uuid", c_uuid], check=False, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                except Exception as e:
+                    self.logger.log(f"[WARNING] Could not clear existing NM profiles: {e}")
 
-                self.logger.log(f"[INFO] Attempting to connect to SSID: {ssid} (Attempt {attempt + 1}/{retry_attempts})")
+                self.logger.log(f"[INFO] Attempting to connect to SSID: {ssid} (Attempt {attempt + 1}/{retry_attempts}) on {self.interface}")
                 result = subprocess.run(
-                    ["sudo", "nmcli", "dev", "wifi", "connect", ssid, "password", password],
+                    ["sudo", "nmcli", "dev", "wifi", "connect", ssid, "password", password, "ifname", self.interface, "hidden", "yes"],
                     stdout=subprocess.PIPE,
                     stderr=subprocess.PIPE,
                     text=True,
@@ -174,7 +190,7 @@ class WiFiManager:
 
         credentials_file = Path("config/wifi_credentials.json")
         try:
-            with open(credentials_file, "r") as file:
+            with open(credentials_file, "r", encoding="utf-8", errors="replace") as file:
                 credentials = json.load(file)
                 self.logger.log(f"[INFO] Loaded Wi-Fi credentials from {credentials_file}.")
                 return credentials

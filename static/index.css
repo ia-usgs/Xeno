@@ -1,98 +1,286 @@
-/* static/index.css */
+/* ══════════════════════════════════════════════════════════════
+   XENO INDEX PAGE — Report Dashboard
+   ══════════════════════════════════════════════════════════════ */
 
-/* allow scrolling while hiding scrollbars */
-html, body {
-  margin: 0;
-  padding: 0;
-  height: 100%;
-  overflow: auto;              /* allow content to scroll */
-  scrollbar-width: none;       /* Firefox: hide scrollbar */
-  -ms-overflow-style: none;    /* IE 10+: hide scrollbar */
-}
-body::-webkit-scrollbar {
-  width: 0;
-  height: 0;
-}
-
-/* full-screen baby xeno background */
+/* Background with overlay */
 body {
-  background: url("/static/images/xenomorph-baby.jpg") center center no-repeat fixed;
-  background-size: cover;
-  font-family: 'Share Tech Mono', monospace;
+  background: url("/static/images/xenomorph-baby.jpg") center center / cover no-repeat fixed;
   position: relative;
-  color: #00ffff;
 }
 
-/* dark translucent overlay so text remains legible */
 .bg-overlay {
   position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0, 0, 0, 0.75);
+  inset: 0;
+  background: linear-gradient(
+    180deg,
+    rgba(5, 10, 18, 0.92) 0%,
+    rgba(5, 10, 18, 0.85) 50%,
+    rgba(5, 10, 18, 0.95) 100%
+  );
   z-index: 0;
 }
 
-/* center and constrain our content, add a grey-white backing */
+/* ─── Main Container ─── */
 .container {
   position: relative;
   z-index: 1;
-  max-width: 800px;
-  margin: 2rem auto;
-  padding: 1rem;
-  background: rgba(255, 255, 255, 0.15);   /* light transparent panel */
-  border-radius: 8px;
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem;
+  min-height: 100vh;
 }
 
-/* neon heading effect */
-header h1 {
+/* ─── Header ─── */
+.container header {
+  background: transparent;
+  border-bottom: none;
+  padding: 3rem 0 1rem;
   text-align: center;
-  font-size: 3rem;
-  color: #00ffff;
+}
+.container header::after { display: none; }
+
+.container header h1 {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 2.8rem;
+  font-weight: 900;
+  color: var(--accent);
   text-shadow:
-    0 0 10px #00ffff,
-    0 0 20px #00ffff,
-    0 0 30px #0000ff;
-  margin-bottom: 0.5rem;
+    0 0 30px var(--accent-glow),
+    0 0 60px rgba(239, 68, 68, 0.2);
+  margin: 0;
+  letter-spacing: 0.2em;
 }
 
-/* horizontal rule under header */
-header hr {
+.container header hr {
   border: none;
-  height: 2px;
-  background: #00ffff;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--accent), transparent);
+  margin: 1.5rem auto;
+  max-width: 400px;
+}
+
+/* ─── Stats Bar ─── */
+.stats-bar {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+  flex-wrap: wrap;
   margin-bottom: 2rem;
 }
+.stat-card {
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.75rem 1.5rem;
+  text-align: center;
+  min-width: 120px;
+}
+.stat-card .stat-value {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: var(--accent);
+  display: block;
+}
+.stat-card .stat-label {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
 
-/* wrap the links in a semi-opaque “table” for contrast */
+/* ─── Search Bar ─── */
+.search-wrapper {
+  position: relative;
+  margin-bottom: 1.5rem;
+}
+.search-wrapper svg {
+  position: absolute;
+  left: 1rem;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 16px;
+  height: 16px;
+  color: var(--text-muted);
+}
+#search-input {
+  width: 100%;
+  padding: 0.75rem 1rem 0.75rem 2.75rem;
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text-primary);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.85rem;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+#search-input::placeholder { color: var(--text-muted); }
+#search-input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-glow);
+}
+
+/* ─── Sort Controls ─── */
+.sort-controls {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+  align-items: center;
+}
+.sort-controls label {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.sort-btn {
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+  padding: 0.35rem 0.75rem;
+  border-radius: 4px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.75rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.sort-btn:hover, .sort-btn.active {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: rgba(239, 68, 68, 0.1);
+}
+
+/* ─── Report List ─── */
 .report-list {
   list-style: none;
-  padding: 1rem;
+  padding: 0;
   margin: 0;
-  background: rgba(255, 255, 255, 0.1);  /* slightly darker panel behind links */
-  border-radius: 4px;
+  display: grid;
+  gap: 0.5rem;
 }
 
-/* spacing between items */
 .report-list li {
-  margin: 0.75rem 0;
+  animation: fadeIn 0.3s ease both;
 }
 
-/* base link styling: same color for new & visited */
 .report-list li a {
-  font-size: 1.5rem;
-  color: #00ffff;              /* neon cyan base */
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1rem 1.25rem;
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text-primary);
   text-decoration: none;
-  transition: all 0.2s ease-in-out;
+  font-size: 0.9rem;
+  transition: all 0.2s ease;
+  position: relative;
+  overflow: hidden;
+}
+.report-list li a::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: var(--accent);
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+.report-list li a:hover {
+  border-color: var(--accent);
+  background: rgba(239, 68, 68, 0.05);
+  transform: translateX(4px);
+  box-shadow: 0 4px 20px rgba(239, 68, 68, 0.1);
+}
+.report-list li a:hover::before { opacity: 1; }
+
+.report-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: var(--accent);
+  font-size: 0.9rem;
 }
 
-/* hover & focus: neon purple glow */
-.report-list li a:hover,
-.report-list li a:focus {
-  color: #8a2be2;              /* neon purple on hover */
-  text-shadow:
-    0 0 8px #8a2be2,
-    0 0 16px rgba(138, 43, 226, 0.7);
-  transform: translateX(5px);
+.report-name {
+  flex: 1;
+  font-weight: 500;
+}
+
+.report-arrow {
+  color: var(--text-muted);
+  transition: color 0.2s, transform 0.2s;
+}
+.report-list li a:hover .report-arrow {
+  color: var(--accent);
+  transform: translateX(3px);
+}
+
+/* ─── Empty State ─── */
+.empty-state {
+  text-align: center;
+  padding: 3rem 1rem;
+  color: var(--text-muted);
+}
+.empty-state svg {
+  width: 48px;
+  height: 48px;
+  margin-bottom: 1rem;
+  opacity: 0.4;
+}
+.empty-state p {
+  font-size: 0.9rem;
+}
+
+/* ─── No Results (search) ─── */
+.no-results {
+  text-align: center;
+  padding: 2rem;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  display: none;
+}
+
+/* ─── Auto-refresh indicator ─── */
+.refresh-indicator {
+  position: fixed;
+  bottom: 1.5rem;
+  right: 1.5rem;
+  z-index: 10;
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.5rem 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.refresh-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--green);
+  animation: pulse-glow 2s infinite;
+}
+
+/* ─── Responsive ─── */
+@media (max-width: 600px) {
+  .container { padding: 1rem; }
+  .container header h1 { font-size: 1.8rem; }
+  .stats-bar { flex-direction: column; align-items: stretch; }
+  .stat-card { min-width: unset; }
 }

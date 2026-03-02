@@ -138,6 +138,11 @@ class Recon:
 
             # Parse Nmap output to extract OS information
             match = re.search(r"Running: ([^\n]*)", os_output)
+            mac_match = re.search(r"MAC Address: ([0-9A-Fa-f:]+) \(([^)]+)\)", os_output)
+            
+            if mac_match:
+                self.logger.log(f"[INFO] Detected MAC Address for {target}: {mac_match.group(1)} (Vendor: {mac_match.group(2)})")
+                
             if match:
                 detected_os = match.group(1).strip()
                 self.logger.log(f"[INFO] Detected OS for {target}: {detected_os}")

@@ -77,6 +77,7 @@ def main():
 
                 stats = {"targets": 0, "vulns": 0, "exploits": 0, "files": 0}
 
+                logger.activity("workflow", ssid, f"Starting attack workflow for {ssid}", status="running")
                 # --- 0) Passive Handshake Capture ---
                 display_svc.update(
                     state="handshake_capture",
@@ -158,17 +159,19 @@ def main():
                     wifi_manager.interface = selected_iface
                     logger.log(f"[INFO] Using interface {selected_iface} for connection phase.")
                 else:
-                    # Fallback to wlan0 if the recommended interface is missing
-                    logger.log(f"[WARNING] {selected_iface} not found after handshake. Falling back to wlan0.")
-                    wifi_manager.interface = "wlan0"
+                    # Fallback to wlan1 if the recommended interface is missing
+                    logger.log(f"[WARNING] {selected_iface} not found after handshake. Falling back to wlan1.")
+                    wifi_manager.interface = "wlan1"
 
                 if ap_count == 0:
                     logger.log("[WARNING] No APs found, skipping handshake phase and continuing workflow.")
                     continue
 
                 # --- 1) Connect ---
+                logger.activity("connect", ssid, f"Connecting to {ssid}...", status="running")
                 display_svc.update(state="scanning", ssid=ssid, status="Connecting to Wi-Fi", stats=stats, partial=True)
                 if not wifi_svc.connect(ssid, pwd):
+                    logger.activity("connect", ssid, "Connection failed", status="error")
                     display_svc.update(
                         state="fallback",
                         ssid=ssid,
@@ -196,11 +199,14 @@ def main():
                         logger.log(f"[WARNING] WPA‑Sec download or parse failed: {exc}")
 
                 # --- 2) Discovery ---
+                logger.activity("nmap_discovery", ssid, f"Connected to {ssid}", status="success")
+                logger.activity("nmap_discovery", ssid, "Running Nmap scan...", status="running")
                 display_svc.update(state="analyzing", ssid=ssid, status="Running Nmap scan", stats=stats, partial=True)
                 scan_res = nmap_svc.discover()
                 log_svc.save_scan(ssid, scan_res)
                 ips = scan_res.get("discovered_ips", [])
                 stats["targets"] = len(ips)
+                logger.activity("nmap_discovery", ssid, f"Discovered {len(ips)} host(s)", status="success", details={"ips": ips})
 
                 # --- 3) Reconnaissance ---
                 display_svc.update(
@@ -214,6 +220,7 @@ def main():
                 log_svc.append_recon(ssid, devices)
 
                 # --- 4) Vulnerability Scan ---
+                logger.activity("investigating", ssid, "Running vulnerability scan...", status="running")
                 vuln_list = vuln_svc.scan(devices, ssid)
                 stats["vulns"] = sum(len(v["vulnerabilities"]) for v in vuln_list)
                 log_svc.append_vulns(ssid, vuln_list)
@@ -261,6 +268,7 @@ def main():
                 wifi_svc.disconnect()
                 wifi_svc.change_mac(interface=wifi_manager.interface)
 
+            logger.activity("workflow", "All Networks", "Workflow Complete for all SSIDs", status="success")
             display_svc.update(
                 state="success",
                 ssid="All Networks",
@@ -270,7 +278,7 @@ def main():
             )
 
             logger.log("[INFO] Cycle complete, sleeping for 10 minutes.")
-            time.sleep(600)
+            time.sleep(20)
 
     except KeyboardInterrupt:
         logger.log("[INFO] Interrupted by user, exiting.")

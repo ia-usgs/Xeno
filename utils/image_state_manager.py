@@ -22,20 +22,20 @@ class ImageStateManager:
 
     # Map workflow states to corresponding images in the /images folder
     IMAGE_MAP = {
-        "scanning": "/home/pi/xeno/images/xeno_walking_right.png",
-        "analyzing": "/home/pi/xeno/images/xeno_detective_right.png",
-        "ready_to_attack": "/home/pi/xeno/images/xeno_preparing_to_attack.png",
-        "attacking": "/home/pi/xeno/images/happy_xeno_ichigo.png",
-        "success": "/home/pi/xeno/images/happy_xeno.png",
-        "fallback": "/home/pi/xeno/images/xeno_walking_left.png",
-        "validating": "/home/pi/xeno/images/xeno_attacking_left.png",
-        "reconnaissance": "/home/pi/xeno/images/xeno_pikachu_hoodie_right.png",
-        "investigating": "/home/pi/xeno/images/xeno_hoodie_left.png",
-        "reviewing": "/home/pi/xeno/images/xeno_detective_left.png",
-        "windows_fingerprint": "/home/pi/xeno/images/xeno_windows_fingerprint.png",
-        "linux_fingerprint": "/home/pi/xeno/images/xeno_linux_fingerprint.png",
-        "file_stolen": "/home/pi/xeno/images/xeno_stolen_file.png",
-        "handshake_capture": "/home/pi/xeno/images/xeno_handshake.png",
+        "scanning": "./images/xeno_walking_right.png",
+        "analyzing": "./images/xeno_detective_right.png",
+        "ready_to_attack": "./images/xeno_preparing_to_attack.png",
+        "attacking": "./images/happy_xeno_ichigo.png",
+        "success": "./images/happy_xeno.png",
+        "fallback": "./images/xeno_walking_left.png",
+        "validating": "./images/xeno_attacking_left.png",
+        "reconnaissance": "./images/xeno_pikachu_hoodie_right.png",
+        "investigating": "./images/xeno_hoodie_left.png",
+        "reviewing": "./images/xeno_detective_left.png",
+        "windows_fingerprint": "./images/xeno_windows_fingerprint.png",
+        "linux_fingerprint": "./images/xeno_linux_fingerprint.png",
+        "file_stolen": "./images/xeno_stolen_file.png",
+        "handshake_capture": "./images/xeno_handshake.png",
     }
 
     # Map workflow states to corresponding messages
