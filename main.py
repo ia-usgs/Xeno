@@ -280,7 +280,7 @@ def main():
             )
 
             logger.log("[INFO] Cycle complete, sleeping for 10 minutes.")
-            time.sleep(20)
+            time.sleep(600)
 
     except KeyboardInterrupt:
         logger.log("[INFO] Interrupted by user, exiting.")
