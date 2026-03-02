@@ -240,7 +240,7 @@ class HandshakeHarvester:
             self.logger.log(f"[WARNING] Monitor mode unavailable on {cand}; trying next candidate...")
 
         if not monitor_iface or not base_iface:
-            self.logger.log("[ERROR] Unable to enable monitor mode on any interface. Skipping handshake capture.")
+            self.logger.log("[INFO] No monitor-capable interface found (no Alfa adapter?). Skipping handshake capture.")
             return 0, interface, False
 
         # Do the scan
