@@ -266,7 +266,41 @@ def main():
                         partial=False
                     )
 
-                # --- 7) Rotate MAC before next SSID ---
+                # --- 7) Award XP for this SSID cycle ---
+                state_mgr = display_svc.state_mgr
+                leveled_up = False
+                # XP per thing found/done this cycle
+                if stats.get("targets", 0) > 0:
+                    leveled_up |= state_mgr.award_xp("device_found",    stats["targets"])
+                if stats.get("vulns", 0) > 0:
+                    leveled_up |= state_mgr.award_xp("vuln_found",      stats["vulns"])
+                if stats.get("exploits", 0) > 0:
+                    leveled_up |= state_mgr.award_xp("exploit_success",  stats["exploits"])
+                if stats.get("files", 0) > 0:
+                    leveled_up |= state_mgr.award_xp("file_stolen",     stats["files"])
+                if stats.get("handshakes", 0) > 0:
+                    leveled_up |= state_mgr.award_xp("handshake",       1)
+                leveled_up |= state_mgr.award_xp("network_scanned", 1)
+
+                stats["level"] = state_mgr.get_level()
+                stats["xp"]    = state_mgr.get_xp()
+                logger.log(
+                    f"[INFO] XP awarded for {ssid}. "
+                    f"Level {state_mgr.get_level()} | "
+                    f"{state_mgr.get_xp()} XP | "
+                    f"{state_mgr.xp_for_next_level()} XP to next level"
+                )
+                if leveled_up:
+                    logger.log(f"[INFO] LEVEL UP! Now level {state_mgr.get_level()}")
+                    display_svc.update(
+                        state="success",
+                        ssid=ssid,
+                        status=f"LEVEL UP! Now Lv.{state_mgr.get_level()}",
+                        stats=stats,
+                        partial=False
+                    )
+
+                # --- 8) Rotate MAC before next SSID ---
                 wifi_svc.disconnect()
                 wifi_svc.change_mac(interface=wifi_manager.interface)
 
