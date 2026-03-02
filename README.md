@@ -195,7 +195,42 @@ Each report shows:
 
 ---
 
-## Directory Structure
+## Leveling System
+
+Xeno has an XP-based leveling system — the more it scans and finds, the stronger it gets. Level and XP are saved to `state.json` and persist across reboots.
+
+### XP Rewards
+
+| Action | XP |
+|---|---|
+| Device discovered | +5 XP each |
+| Vulnerability matched | +15 XP each |
+| Successful exploit | +30 XP each |
+| Files stolen from a host | +50 XP each |
+| WPA handshake captured | +25 XP |
+| Network fully scanned | +10 XP |
+
+### Level Curve
+
+Leveling gets progressively harder using a quadratic curve (`75 × n²`):
+
+| Level | Total XP needed | XP gap from previous |
+|---|---|---|
+| 2 | 75 XP | 75 |
+| 5 | 1,875 XP | 375 |
+| 10 | 7,500 XP | 675 |
+| 20 | 30,000 XP | 1,425 |
+
+A typical scan cycle (10 devices + 3 vulns + 1 network) earns ~**100 XP**, so:
+- **Level 2** after ~1–2 scans
+- **Level 10** after days of active scanning
+- **Level 20** requires consistent long-term use
+
+### Level Up
+When Xeno levels up, the e-paper display shows **"LEVEL UP! Now Lv.X"** and the level is updated in `state.json`. The current level and XP are also logged to the live feed after each SSID cycle.
+
+---
+
 
 ```
 xeno/
