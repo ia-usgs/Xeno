@@ -159,13 +159,15 @@ def main():
                     wifi_manager.interface = selected_iface
                     logger.log(f"[INFO] Using interface {selected_iface} for connection phase.")
                 else:
-                    # Fallback to wlan1 if the recommended interface is missing
-                    logger.log(f"[WARNING] {selected_iface} not found after handshake. Falling back to wlan1.")
-                    wifi_manager.interface = "wlan1"
+                    # No Alfa adapter — fall back to the built-in wlan0
+                    fallback = "wlan0" if os.path.exists("/sys/class/net/wlan0") else selected_iface
+                    logger.log(f"[WARNING] {selected_iface} not found after handshake. Falling back to {fallback}.")
+                    wifi_manager.interface = fallback
 
                 if ap_count == 0:
-                    logger.log("[WARNING] No APs found, skipping handshake phase and continuing workflow.")
-                    continue
+                    logger.log("[INFO] No APs captured via handshake (no monitor-capable adapter). Continuing to connect + scan.")
+                    # Do NOT skip — fall through to the connection phase
+
 
                 # --- 1) Connect ---
                 logger.activity("connect", ssid, f"Connecting to {ssid}...", status="running")
